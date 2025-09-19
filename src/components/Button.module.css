@@ -1,0 +1,71 @@
+.storybook-button {
+  display: inline-block;
+  cursor: pointer;
+  border: none;
+  border-radius: 2.5em;
+  font-weight: 700;
+  line-height: 1;
+  font-family: 'Nunito Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Primary Button */
+.storybook-button--primary {
+  background: linear-gradient(135deg, #1D4ED8, #3B82F6);
+  color: white;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+
+.storybook-button--primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+}
+
+/* Secondary Button */
+.storybook-button--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #555ab9;
+  border: 1px solid #555ab9;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.storybook-button--secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Sizes */
+.storybook-button--small {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+.storybook-button--medium {
+  padding: 12px 22px;
+  font-size: 14px;
+}
+.storybook-button--large {
+  padding: 16px 28px;
+  font-size: 16px;
+}
+
+/* Optional: Cool hover overlay effect */
+.storybook-button::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.15);
+  transform: rotate(45deg) translate(-100%, -100%);
+  transition: all 0.5s ease;
+  z-index: 0;
+}
+
+.storybook-button:hover::after {
+  transform: rotate(45deg) translate(0, 0);
+}
