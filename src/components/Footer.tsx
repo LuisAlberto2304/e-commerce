@@ -1,6 +1,6 @@
 'use client'
 import React from "react";
-import styles from './Footer.module.css'
+import '../styles/globals.css'
 
 export type FooterProps = {
   text?: string
@@ -8,7 +8,7 @@ export type FooterProps = {
 
 export const Footer: React.FC<FooterProps> = ({ text = "© 2025 E-tianguis" }) => {
   return (
-    <footer className={styles['storybook-footer']}>
+    <footer className={'footer'}>
       <p>{text}</p>
       <p>
         <a href="#">Política de privacidad</a> | <a href="#">Términos de uso</a>

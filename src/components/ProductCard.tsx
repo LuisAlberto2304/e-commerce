@@ -1,6 +1,6 @@
 'use client'
 import React from "react";
-import styles from './ProductCard.module.css'
+import '../styles/globals.css'
 
 export type CardProps = {
   title: string;
@@ -20,26 +20,26 @@ export const ProductCard: React.FC<CardProps> = ({
   onAddToCart,
 }) => {
   return (
-    <div className={styles['storybook-card']}>
+    <div className={'card'}>
       {imageUrl && (
         <img
           src={imageUrl}
           alt={title}
-          className={styles['storybook-card-img']}
+          className={'card-img'}
         />
       )}
-      <div className={styles['storybook-card-body']}>
-        <h2 className={styles['storybook-card-title']}>{title}</h2>
-        <p className={styles['storybook-card-description']}>{description}</p>
-        <p className={styles['storybook-card-price']}>{price}</p>
+      <div className={'card-body'}>
+        <h2 className={'scard-title'}>{title}</h2>
+        <p className={'card-description'}>{description}</p>
+        <p className={'card-price'}>{price}</p>
         <button
           onClick={onAddToCart}
-          className={`${styles['storybook-button']} ${styles['storybook-button--primary']}`}
+          className={`${'button'} ${'button--primary'}`}
         >
           Comprar
         </button>
       </div>
-      {footerText && <div className={styles['storybook-card-footer']}>{footerText}</div>}
+      {footerText && <div className={'card-footer'}>{footerText}</div>}
     </div>
   );
 };

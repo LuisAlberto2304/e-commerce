@@ -1,0 +1,366 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------- Seccion de variables -------------------------------------------------------- */
+@theme {
+  --color-primary-500: #3B82F6; 
+  --color-primary-700: #1D4ED8;
+
+  --color-secondary-500: #F43F5E; 
+  --color-secondary-700: #BE123C;
+
+  --color-bg: ##FFFFFF;        
+  --color-surface: #FFFFFF;
+  --color-surface2: #F8F7FF;
+  --color-text: #111827;      
+  --color-text-secondary: #4B5563; 
+
+  --color-success: #22C55E;   
+  --color-warning: #F59E0B;   
+
+  /* Tipografía */
+  --font-sans: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; /* texto principal */
+  --font-heading: "Poppins", var(--font-sans); /* títulos */
+
+  /* Espaciado */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Breakpoints */
+  --breakpoint-xs: 30rem; 
+  --breakpoint-sm: 40rem; 
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+}
+
+.dark {
+  --color-bg: #111827;         
+  --color-surface: #1F2937;  
+  --color-text: #F9FAFB;     
+  --color-text-secondary: #CBD5E1;
+
+  --color-primary-500: #60A5FA; 
+  --color-primary-700: #3B82F6;
+
+  --color-secondary-500: #FB7185;
+  --color-secondary-700: #F43F5E;
+}
+
+body {
+  @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* -------------------------------------------------------- Estilos para los buttons -------------------------------------------------------- */
+  .button {
+    @apply inline-block cursor-pointer border-0 font-bold leading-none font-sans relative overflow-hidden z-[1] transition-all duration-300 ease-in-out rounded-full;
+  }
+
+  /* Primary */
+  .button--primary {
+    background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-500));
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+  }
+  .button--primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+  }
+
+  /* Secondary */
+  .button--secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #555ab9;
+    border: 1px solid #555ab9;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  .button--secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  /* Sizes */
+  .button--small {
+    @apply px-[14px] py-[8px] text-xs;
+  }
+  .button--medium {
+    @apply px-[22px] py-[12px] text-sm;
+  }
+  .button--large {
+    @apply px-[28px] py-[16px] text-base;
+  }
+
+  /* Hover overlay */
+  .button::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.15);
+    transform: rotate(45deg) translate(-100%, -100%);
+    transition: all 0.5s ease;
+    z-index: 0;
+  }
+
+  .button:hover::after {
+    transform: rotate(45deg) translate(0, 0);
+  }
+
+  /* -------------------------------------------------------- Estilos para los Product Card -------------------------------------------------------- */
+  .card {
+    background: white;
+    border-radius: 1em;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    width: 300px;
+    font-family: 'Poppins', sans-serif;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+
+  .card-img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+  }
+
+  .card-body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    text-align: center;
+  }
+
+  .card-description {
+    font-size: 14px;
+    color: #555;
+    margin: 0 0 10px 0;
+    text-align: center;
+  }
+
+  .card-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary-700);
+    margin-bottom: 12px;
+  }
+
+  /* Footer opcional */
+  .card-footer {
+    padding: 10px 15px;
+    background-color: #f1f5f9;
+    font-size: 13px;
+    color: #333;
+    text-align: center;
+  }
+
+  /* Botón de compra (usa tu diseño de botón) */
+  .button {
+    display: inline-block;
+    cursor: pointer;
+    border: 0;
+    border-radius: 3em;
+    font-weight: 700;
+    line-height: 1;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+  }
+
+  .button--primary {
+    background-color: #555ab9;
+    color: white;
+    padding: 12px 24px;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  /* -------------------------------------------------------- Estilos para el header --------------------------------------------------------*/
+
+  .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px;
+  font-family: 'Poppins', sans-serif; /* Cambiado a Poppins */
+  background: var(--color-primary-700);
+  color: white;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+  border-bottom: none;
+  position: relative;
+  z-index: 1;
+}
+
+
+/* Logo / iconos */
+.header svg {
+  display: inline-block;
+  vertical-align: top;
+  fill: white;
+  /* Se elimina la transición y el hover */
+}
+
+/* Título */
+.header h1 {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0 0 0 10px;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1;
+  color: white;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Botones dentro del header */
+.header button {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  border-radius: 2.5em;
+  overflow: hidden;
+  /* Se elimina la transición si quieres quitar animaciones */
+}
+
+/* Espaciado entre botones */
+.header button + button {
+  margin-left: 10px;
+}
+
+/* Bienvenida */
+.header .welcome {
+  margin-right: 15px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Quitar overlay de brillo */
+.header::after {
+  display: none;
+}
+
+/* Responsividad simple */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 15px 20px;
+  }
+  
+  .header h1 {
+    margin: 10px 0;
+  }
+
+  .header .welcome {
+    margin: 0 0 10px 0;
+  }
+}
+
+/* -------------------------------------------------------- Estilos para el footer --------------------------------------------------------*/
+
+.footer {
+  font-family: 'Poppins', sans-serif;
+  background: var(--color-primary-700);
+  color: white;
+  text-align: center;
+  padding: 20px 15px;
+  box-shadow: 0 -4px 15px rgba(108, 92, 231, 0.3);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+/* Mensaje dentro del footer */
+.footer p {
+  margin: 0;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Links en el footer */
+.footer a {
+  color: #ffffffcc;
+  text-decoration: none;
+  font-weight: 600;
+  margin: 0 5px;
+  transition: color 0.3s ease;
+}
+
+.footer a:hover {
+  color: #ffffff;
+}
+
+/* Pequeño overlay sutil (sin animación hover) */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+  .footer {
+    padding: 15px 10px;
+    font-size: 13px;
+  }
+}
+
+
+/* -------------------------------------------------------- Estilos para el banner --------------------------------------------------------*/
+.banner {
+  @apply relative w-full overflow-hidden rounded-2xl shadow-lg text-white;
+  background-color: var(--color-primary-700);
+}
+
+  /* Contenedor interno */
+  .banner-container {
+    @apply max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 items-center px-8 py-16 gap-8;
+  }
+
+  /* Texto */
+  .banner-title {
+    @apply text-3xl md:text-5xl font-heading font-bold mb-4;
+  }
+
+  .banner-subtitle {
+    @apply text-lg md:text-xl text-[var(--color-text)] mb-6;
+  }
+
+  /* Imagen */
+  .banner-img {
+    @apply w-72 md:w-96 object-contain drop-shadow-2xl;
+  }
+
+
+
