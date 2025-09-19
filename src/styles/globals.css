@@ -8,7 +8,7 @@
   --color-secondary-500: #F43F5E; 
   --color-secondary-700: #BE123C;
 
-  --color-bg: ##FFFFFF;        
+  --color-bg: #FFFFFF;        
   --color-surface: #FFFFFF;
   --color-surface2: #F8F7FF;
   --color-text: #111827;      
@@ -54,6 +54,21 @@
 
 body {
   @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+html {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -65,7 +80,6 @@ h1, h2, h3, h4, h5, h6 {
     @apply inline-block cursor-pointer border-0 font-bold leading-none font-sans relative overflow-hidden z-[1] transition-all duration-300 ease-in-out rounded-full;
   }
 
-  /* Primary */
   .button--primary {
     background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-500));
     color: white;
@@ -76,20 +90,18 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
   }
 
-  /* Secondary */
   .button--secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: #555ab9;
-    border: 1px solid #555ab9;
+    background: black;
+    color: white;
+    border: 1px solid;
     backdrop-filter: blur(8px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin-right: 10px;
   }
   .button--secondary:hover {
-    background: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
   }
 
-  /* Sizes */
   .button--small {
     @apply px-[14px] py-[8px] text-xs;
   }
@@ -100,7 +112,6 @@ h1, h2, h3, h4, h5, h6 {
     @apply px-[28px] py-[16px] text-base;
   }
 
-  /* Hover overlay */
   .button::after {
     content: "";
     position: absolute;
@@ -168,7 +179,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 12px;
   }
 
-  /* Footer opcional */
   .card-footer {
     padding: 10px 15px;
     background-color: #f1f5f9;
@@ -177,7 +187,6 @@ h1, h2, h3, h4, h5, h6 {
     text-align: center;
   }
 
-  /* Botón de compra (usa tu diseño de botón) */
   .button {
     display: inline-block;
     cursor: pointer;
@@ -204,7 +213,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: space-between;
   align-items: center;
   padding: 15px 25px;
-  font-family: 'Poppins', sans-serif; /* Cambiado a Poppins */
+  font-family: 'Poppins', sans-serif; 
   background: var(--color-primary-700);
   color: white;
   box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
@@ -213,16 +222,12 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 1;
 }
 
-
-/* Logo / iconos */
 .header svg {
   display: inline-block;
   vertical-align: top;
   fill: white;
-  /* Se elimina la transición y el hover */
 }
 
-/* Título */
 .header h1 {
   display: inline-block;
   vertical-align: top;
@@ -234,33 +239,27 @@ h1, h2, h3, h4, h5, h6 {
   text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
 }
 
-/* Botones dentro del header */
 .header button {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
   border-radius: 2.5em;
   overflow: hidden;
-  /* Se elimina la transición si quieres quitar animaciones */
 }
 
-/* Espaciado entre botones */
 .header button + button {
   margin-left: 10px;
 }
 
-/* Bienvenida */
 .header .welcome {
   margin-right: 15px;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Quitar overlay de brillo */
 .header::after {
   display: none;
 }
 
-/* Responsividad simple */
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
@@ -286,16 +285,12 @@ h1, h2, h3, h4, h5, h6 {
   text-align: center;
   padding: 20px 15px;
   box-shadow: 0 -4px 15px rgba(108, 92, 231, 0.3);
-  position: relative;
-  overflow: hidden;
   width: 100%;
-  position: fixed;
   bottom: 0;
   left: 0;
   z-index: 1000;
 }
 
-/* Mensaje dentro del footer */
 .footer p {
   margin: 0;
   font-weight: 500;
@@ -303,7 +298,6 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.5;
 }
 
-/* Links en el footer */
 .footer a {
   color: #ffffffcc;
   text-decoration: none;
@@ -316,7 +310,6 @@ h1, h2, h3, h4, h5, h6 {
   color: #ffffff;
 }
 
-/* Pequeño overlay sutil (sin animación hover) */
 .footer::before {
   content: "";
   position: absolute;
@@ -328,7 +321,6 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
-/* Responsividad */
 @media (max-width: 768px) {
   .footer {
     padding: 15px 10px;
@@ -343,24 +335,65 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--color-primary-700);
 }
 
-  /* Contenedor interno */
   .banner-container {
     @apply max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 items-center px-8 py-16 gap-8;
   }
 
-  /* Texto */
   .banner-title {
-    @apply text-3xl md:text-5xl font-heading font-bold mb-4;
+    @apply text-3xl md:text-5xl font-heading font-bold mb-4 text-center;
   }
 
   .banner-subtitle {
-    @apply text-lg md:text-xl text-[var(--color-text)] mb-6;
+    @apply text-lg md:text-xl text-[white] mb-6 text-center;
   }
 
-  /* Imagen */
   .banner-img {
-    @apply w-72 md:w-96 object-contain drop-shadow-2xl;
+    @apply w-72 md:w-96 object-contain drop-shadow-2xl bg-amber-50;
+    border-radius: 10%;
   }
 
+
+/* -------------------------------------------------------- Estilos para formulario Login --------------------------------------------------------*/
+.login-page {
+  @apply flex mt-30 items-center justify-center;
+}
+
+.login-box {
+  @apply w-full max-w-md rounded-2xl bg-white p-15 pt-5 shadow-2xl ring-1 ring-gray-200;
+}
+
+.login-title {
+  @apply mb-4 mt-4 text-center text-3xl font-extrabold tracking-tight text-gray-900;
+}
+
+.login-form {
+  @apply space-y-6;
+}
+
+.login-label {
+  @apply block text-sm font-semibold text-gray-700;
+}
+
+.login-input {
+  @apply w-70 rounded-xl border border-gray-300 bg-gray-50 p-3 text-gray-800 
+         shadow-sm transition focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-400;
+}
+
+.login-button {
+  @apply w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-md 
+         transition hover:bg-indigo-700 hover:shadow-lg active:scale-95;
+}
+
+.login-footer {
+  @apply mt-8 text-center text-sm text-gray-600;
+}
+
+.login-footer a {
+  @apply font-medium text-indigo-600 transition hover:text-indigo-700 hover:underline;
+}
+
+.login-top {
+  @apply font-medium text-indigo-600 transition hover:text-indigo-700 hover:underline mb-10 mt-5;
+}
 
 

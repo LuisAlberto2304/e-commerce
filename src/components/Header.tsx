@@ -1,4 +1,5 @@
 'use client'
+import Link from "next/link";
 import { Button } from './Button'
 import '../styles/globals.css'
 
@@ -33,7 +34,10 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
             />
           </g>
         </svg>
-        <h1>E-tianguis</h1>
+        <Link href="/">
+                <h1>E-tianguis</h1>
+        </Link>
+
       </div>
 
       <div>
@@ -46,8 +50,12 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
           </>
         ) : (
           <>
-            <Button size="small" onClick={onLogin} label="Log in" />
-            <Button primary size="small" onClick={onCreateAccount} label="Sign up" />
+            <Link href="/login">
+              <Button variant="secondary" size="medium" label="Iniciar Sesión" />
+            </Link>
+            <Link href="/register">
+              <Button variant="secondary" size="medium" label="Registrarte" />
+            </Link>
           </>
         )}
       </div>
