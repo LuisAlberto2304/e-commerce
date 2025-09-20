@@ -66,7 +66,35 @@ export default function HomePage() {
           ))}
         </div>
       </div>
-      <p className="mt-6 text-text-secondary">
+      <br />
+      <div className="bg-red-200 p-10 rounded-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {products.map((product) => (
+            <ProductCard
+              key={product.title}
+              title={product.title}
+              description={product.description}
+              price={product.price}
+              imageUrl={product.img}
+            />
+          ))}
+        </div>
+      </div>
+      <br />
+      <div className="bg-fuchsia-300 p-10 rounded-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {products.map((product) => (
+            <ProductCard
+              key={product.title}
+              title={product.title}
+              description={product.description}
+              price={product.price}
+              imageUrl={product.img}
+            />
+          ))}
+        </div>
+      </div>
+      <p className="mt-6 text-text-secondary text-center">
         ¡Explora nuestra colección completa para encontrar más productos increíbles!
       </p>
     </section>
