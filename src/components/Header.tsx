@@ -76,7 +76,7 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
       <nav className="bg-blue-100 border-black border-1">
         <ul className="flex gap-6 px-6 py-3 text-black font-medium justify-center items-center">
           <li>
-            <Link href="/categoria/ropa" className="hover:text-blue-600">
+            <Link href="/category" className="hover:text-blue-600">
               Camisas
             </Link>
           </li>

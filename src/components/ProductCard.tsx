@@ -10,6 +10,7 @@ export type CardProps = {
   footerText?: string;
   price?: string;
   onAddToCart?: () => void;
+  label?: string;
 };
 
 export const ProductCard: React.FC<CardProps> = ({
@@ -18,11 +19,18 @@ export const ProductCard: React.FC<CardProps> = ({
   imageUrl,
   footerText,
   price = "$0.00",
+  label,
   onAddToCart,
 }) => {
   return (
     <Link href={`/products/${title}`}>
+      
       <div className={'card cursor-pointers'}>
+        {label && (
+        <span className="card-label">
+          {label}
+        </span>
+      )}
         {imageUrl && (
           <img
             src={imageUrl}
