@@ -77,54 +77,8 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
         <ul className="flex gap-6 px-6 py-3 text-black font-medium justify-center items-center">
           <li>
             <Link href="/category" className="hover:text-blue-600">
-              Camisas
+              Todos los productos
             </Link>
-          </li>
-          <li>
-            <Link href="/categoria/electronica" className="hover:text-blue-600">
-              Pantalones
-            </Link>
-          </li>
-          <li>
-            <Link href="/categoria/hogar" className="hover:text-blue-600">
-              Infantil
-            </Link>
-          </li>
-          <li className="relative group">
-            <button className="hover:text-blue-600 flex items-center gap-1">
-              Más
-              <span className="transition-transform duration-200 group-hover:rotate-180">▼</span>
-            </button>
-            <div className="absolute left-0 mt-2 w-40 z-50 hidden group-hover:block">
-              <ul className="relative bg-white border rounded-lg shadow-lg p-2 
-                            before:content-[''] before:absolute before:-top-2 before:left-0 
-                            before:w-full before:h-2">
-                <li>
-                  <Link
-                    href="/categoria/deportes"
-                    className="block px-3 py-2 hover:bg-gray-100"
-                  >
-                    Deportiva
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/categoria/juguetes"
-                    className="block px-3 py-2 hover:bg-gray-100"
-                  >
-                    Trabajo
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/categoria/calzado"
-                    className="block px-3 py-2 hover:bg-gray-100"
-                  >
-                    Calzado
-                  </Link>
-                </li>
-              </ul>
-            </div>
           </li>
         </ul>
       </nav>

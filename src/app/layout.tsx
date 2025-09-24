@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body className="bg-bg text-text font-sans">
         {showHeader && <Header />}
-        <main className="max-w-6xl mx-auto p-6">{children}</main> {/* contenido de la página */}
+        <main className="max-w-700 mx-auto p-6">{children}</main> {/* contenido de la página */}
         <Footer /> {/* siempre visible */}
       </body>
     </html>

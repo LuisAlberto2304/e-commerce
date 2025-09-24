@@ -1,103 +1,63 @@
-import { ProductCard } from '../../components/ProductCard'
+// app/page.tsx (o donde tengas tu página principal)
+"use client";
+import { useState, useEffect } from "react";
+import FiltersSidebar from "@/components/FiltersSidebar";
+import ProductGridWithFilters from "@/components/ProductGridWithFilters";
 
-type Price = {
-  amount: number;
-  currency_code: string;
-};
-
-type ProductImage = {
-  id: string;
-  url: string;
-};
-
-type Variant = {
-  id: string;
-  title: string;
-  sku?: string;
-  prices?: Price[];
-};
-
-type Product = {
-  id: string;
-  title: string;
-  description: string;
-  variants?: Variant[];
-  images?: ProductImage[];
-};
-
-interface PageProps {
-  searchParams?: { page?: string };
-}
-
-export default async function ProductsPage({ searchParams }: PageProps) {
-  const page = parseInt(searchParams?.page || "1");
-  const limit = 3;
-  const offset = (page - 1) * limit;
-
-  //Fetch para mostrar los productos de la plataforma Medusa
+// Función para obtener categorías
+const fetchCategories = async () => {
   try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/store/products?limit=${limit}&offset=${offset}`,
-      {
-        headers: {
-          "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY!,
-        },
-        cache: "no-store",
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error(`Error fetching products: ${res.status} ${res.statusText}`);
-    }
-
-    const data = await res.json();
-
-    return (
-      <>
-        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
-          {data.products.map((p: Product) => (
-            <ProductCard
-              key={p.id}
-              title={p.title}
-              description={p.description}
-              imageUrl={p.images?.[0]?.url}
-              price={
-                p.variants?.[0]?.prices?.[0]
-                  ? `$${p.variants[0].prices[0].amount / 100} ${p.variants[0].prices[0].currency_code.toUpperCase()}`
-                  : undefined
-              }
-              label="Nuevo" 
-            />
-          ))}
-        </div>
-
-        {/* Paginación */}
-        <div className="flex justify-center mt-6 gap-4">
-          {page > 1 && (
-            <a
-              href={`?page=${page - 1}`}
-              className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md 
-             hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 
-             transition"
-            >
-              Anterior
-            </a>
-          )}
-          {data.count > page * limit && (
-            <a
-              href={`?page=${page + 1}`}
-              className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg shadow-md 
-             hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 
-             transition"
-            >
-              Siguiente
-            </a>
-          )}
-        </div>
-      </>
-    );
+    const res = await fetch('/api/categories');
+    if (!res.ok) throw new Error('Error fetching categories');
+    return await res.json();
   } catch (error) {
-    console.error("Error fetching products:", error);
-    return <div>Error cargando productos. Revisa la consola.</div>;
+    console.error('Error fetching categories:', error);
+    return [];
   }
+};
+
+export default function HomePage() {
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<{ q?: string; color?: string; size?: string }>({});
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        const categoriesData = await fetchCategories();
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  if (loadingCategories) {
+    return <div className="p-4">Cargando categorías...</div>;
+  }
+
+  return (
+    <div className="flex flex-col md:flex-row min-h-screen">
+      <FiltersSidebar
+        categories={categories}
+        selectedCategoryId={selectedCategoryId}
+        setSelectedCategoryId={setSelectedCategoryId}
+        setFilters={setFilters}
+        currentFilters={filters}
+      />
+      
+      <main className="flex-1 p-6">
+        <ProductGridWithFilters 
+          categoryId={selectedCategoryId}
+          filters={filters}
+        />
+      </main>
+    </div>
+  );
 }
