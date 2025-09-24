@@ -37,3 +37,75 @@ export async function fetchProducts(filters: {
     throw error;
   }
 }
+
+export async function fetchProductById(id: string) {
+  const url = `/api/products/${id}`;
+  console.log("📡 Llamando a API:", url);
+
+  try {
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Error en respuesta:", res.status, errorText);
+      throw new Error(`Failed to fetch product: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log("✅ Respuesta completa de API:", data);
+    
+    // CORRECCIÓN: Extraer el producto de la propiedad `product`
+    const product = data.product || data;
+    console.log("✅ Producto extraído:", product?.title || "Sin título");
+    
+    return product;
+  } catch (error) {
+    console.error("🚨 Error en fetchProductById:", error);
+    throw error;
+  }
+}
+
+
+export async function fetchCategoryById(id: string) {
+  const url = `/api/categories/${id}`;
+  console.log("📡 Llamando a categoría API:", url);
+
+  try {
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Error en respuesta de categoría:", res.status, errorText);
+      return null;
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error("🚨 Error en fetchCategoryById:", error);
+    return null;
+  }
+}
+
+export async function fetchCategories() {
+  const url = `/api/categories`;
+  console.log("📡 Llamando a categorías API:", url);
+
+  try {
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Error en respuesta de categorías:", res.status, errorText);
+      return [];
+    }
+
+    const data = await res.json();
+    return data.categories || [];
+  } catch (error) {
+    console.error("🚨 Error en fetchCategories:", error);
+    return [];
+  }
+}
+
+

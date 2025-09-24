@@ -1,236 +1,267 @@
+// app/products/[id]/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { useState } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ShoppingCart, Heart } from 'lucide-react';
+import { fetchProductById, fetchCategoryById } from '@/app/lib/medusaClient';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import StockStatus from '@/components/StockStatus';
 
 const ProductoDetallePage = () => {
   const params = useParams();
-  const { id } = params;
+  const id = params.id as string;
 
-  const producto = {
-    id,
-    title: `Camiseta Oversize Premium`,
-    description:
-      'Camiseta unisex oversize de algodón orgánico 100%, ideal para un look casual con un toque moderno.',
-    price: '$99.00',
-    images: [
-      'https://png.pngtree.com/png-vector/20240807/ourmid/pngtree-plain-pink-t-shirt-mockup-png-image_13161627.png',
-      'https://yazbek.com.mx/cdn/shop/files/C0250-playera-cr-mc-caballero-50algodon-50poliester-rosa-neon_1.jpg?v=1734387063',
-      'https://creativity.mx/wp-content/uploads/2024/06/Playera_ROSA_hombre-600x600.png',
-    ],
-    colors: [
-      { name: 'Rosa', value: '#f472b6' },
-      { name: 'Negro', value: '#000000' },
-      { name: 'Blanco', value: '#ffffff' },
-    ],
-    sizes: ['S', 'M', 'L', 'XL'],
-    features: [
-      'Algodón 100% orgánico',
-      'Corte oversize',
-      'Disponible en varias tallas',
-      'Lavar a máquina en frío',
-    ],
-    reviews: [
-      { user: 'Usuario', rating: 5, comment: 'Excelente calidad, super cómoda.' },
-      { user: 'Usuario', rating: 4, comment: 'Muy buena, aunque la talla viene un poco grande.' },
-    ],
-    related: [
-      {
-        id: '2',
-        title: 'Camiseta Básica',
-        price: '$59.00',
-        imageUrl:
-          'https://w7.pngwing.com/pngs/448/813/png-transparent-coat-outerwear-pink-m-jacket-button-jacket-pink-m-barnes-noble-rtv-pink.png',
-      },
-      {
-        id: '3',
-        title: 'Sudadera Minimal',
-        price: '$149.00',
-        imageUrl:
-          'https://e7.pngegg.com/pngimages/884/903/png-clipart-jacket-pink-m-jacket-magenta-pink-m.png',
-      },
-    ],
+  const [producto, setProducto] = useState<any | null>(null);
+  const [category, setCategory] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<{[key: string]: string}>({});
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [quantity, setQuantity] = useState(1);
+
+  // Cargar producto y categoría
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    const loadProductData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Cargar producto
+        const productData = await fetchProductById(id);
+        const product = productData.product || productData;
+        
+        if (!product) {
+          throw new Error('Producto no encontrado');
+        }
+
+        setProducto(product);
+        
+        // Cargar categoría si existe
+        if (product.category_id) {
+          const categoryData = await fetchCategoryById(product.category_id);
+          setCategory(categoryData);
+        }
+
+        // Inicializar estados
+        if (product.images && product.images.length > 0) {
+          setSelectedImage(product.images[0].url);
+        }
+
+        const initialOptions: {[key: string]: string} = {};
+        if (product.options) {
+          product.options.forEach((option: any) => {
+            if (option.values && option.values.length > 0) {
+              initialOptions[option.title] = option.values[0].value;
+            }
+          });
+          setSelectedOptions(initialOptions);
+        }
+
+        if (product.variants && product.variants.length > 0) {
+          setSelectedVariant(product.variants[0]);
+        }
+
+      } catch (err) {
+        console.error('❌ Error al cargar producto:', err);
+        setError('Error al cargar el producto');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProductData();
+  }, [id]);
+
+  // Generar breadcrumbs
+  const breadcrumbItems = [
+    { label: 'Inicio', href: '/' },
+    { label: 'Productos', href: '/category' },
+    ...(category ? [{ label: category.name, href: `/categorias/${category.id}` }] : []),
+    { label: producto?.title || 'Cargando...' }
+  ];
+
+  // Obtener cantidad en stock
+  const getStockQuantity = () => {
+    return selectedVariant?.inventory_quantity || 
+           producto?.variants?.[0]?.inventory_quantity || 
+           0;
   };
 
-  // 🔹 Estados seleccionados
-  const [selectedImage, setSelectedImage] = useState(producto.images[0]);
-  const [selectedColor, setSelectedColor] = useState(producto.colors[0].name);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const handleOptionChange = (optionTitle: string, value: string) => {
+    const newOptions = {
+      ...selectedOptions,
+      [optionTitle]: value
+    };
+    setSelectedOptions(newOptions);
+
+    if (producto.variants) {
+      const variant = producto.variants.find((v: any) => {
+        return v.options.every((opt: any) => 
+          newOptions[opt.option?.title] === opt.value
+        );
+      });
+      setSelectedVariant(variant);
+    }
+  };
+
+  const getCurrentPrice = () => {
+    if (selectedVariant?.prices?.[0]) {
+      return `$${(selectedVariant.prices[0].amount / 100).toFixed(2)}`;
+    }
+    if (producto?.variants?.[0]?.prices?.[0]) {
+      return `$${(producto.variants[0].prices[0].amount / 100).toFixed(2)}`;
+    }
+    return 'Precio no disponible';
+  };
+
+  if (loading) return (
+    <div className="max-w-6xl mx-auto p-6">
+      <p className="text-center text-lg">Cargando producto...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="max-w-6xl mx-auto p-6">
+      <p className="text-center text-red-600 text-lg">{error}</p>
+    </div>
+  );
+
+  if (!producto) return (
+    <div className="max-w-6xl mx-auto p-6">
+      <p className="text-center text-lg">Producto no encontrado</p>
+    </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      {/* 🔹 Grid principal */}
+      {/* 🧭 Breadcrumbs */}
+      <Breadcrumbs items={breadcrumbItems} />
+
       <div className="grid md:grid-cols-2 gap-10">
+        
         {/* 📷 Galería de imágenes */}
         <div>
-          <div className="flex items-center justify-center bg-gray-100 rounded-2xl p-6">
-            <img
-              src={selectedImage}
-              alt={producto.title}
-              width={500}
-              height={500}
-              className="rounded-lg object-cover"
-            />
+          <div className="flex items-center justify-center bg-gray-100 rounded-2xl p-6 min-h-[400px]">
+            {selectedImage ? (
+              <img
+                src={selectedImage}
+                alt={producto.title}
+                width={500}
+                height={500}
+                className="rounded-lg object-cover max-h-[400px]"
+              />
+            ) : (
+              <div className="text-gray-400">No hay imagen disponible</div>
+            )}
           </div>
-          <div className="flex gap-3 mt-4">
-            {producto.images.map((img, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedImage(img)}
-                className={`border-2 rounded-lg p-1 ${
-                  selectedImage === img ? 'border-emerald-500' : 'border-transparent'
-                }`}
-              >
-                <img
-                  src={img}
-                  alt="miniatura"
-                  width={80}
-                  height={80}
-                  className="rounded-md"
-                />
-              </button>
-            ))}
-          </div>
+          
+          {producto.images && producto.images.length > 1 && (
+            <div className="flex gap-3 mt-4 overflow-x-auto">
+              {producto.images.map((img: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedImage(img.url)}
+                  className={`flex-shrink-0 border-2 rounded-lg p-1 ${
+                    selectedImage === img.url ? 'border-emerald-500' : 'border-transparent'
+                  }`}
+                >
+                  <img
+                    src={img.url}
+                    alt={`Vista ${idx + 1}`}
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 📖 Información del producto */}
         <div>
-          <h1 className="text-4xl font-bold">{producto.title}</h1>
-          <p className="mt-4 text-gray-600">{producto.description}</p>
-          <p className="mt-6 text-3xl font-semibold text-emerald-600">{producto.price}</p>
+          <h1 className="text-4xl font-bold">{producto.title || 'Sin título'}</h1>
+          
+          {/* 📊 Stock Status */}
+          <div className="mt-4">
+            <StockStatus quantity={getStockQuantity()} />
+          </div>
+          
+          <p className="mt-4 text-gray-600">
+            {producto.description || 'No hay descripción disponible'}
+          </p>
 
-          {/* 🎨 Colores */}
-          <div className="mt-6">
-            <h2 className="font-semibold mb-2">Color</h2>
-            <div className="flex gap-3">
-              {producto.colors.map((color) => (
-                <button
-                  key={color.name}
-                  onClick={() => setSelectedColor(color.name)}
-                  className={`w-10 h-10 rounded-full border-2 ${
-                    selectedColor === color.name
-                      ? 'border-emerald-500'
-                      : 'border-gray-300'
-                  }`}
-                  style={{ backgroundColor: color.value }}
-                />
-              ))}
+          {/* 💰 Precio */}
+          <p className="mt-6 text-3xl font-semibold text-emerald-600">
+            {getCurrentPrice()}
+          </p>
+
+          {/* 🔢 Selector de Cantidad */}
+          <div className="flex items-center space-x-3 mt-4">
+            <span className="font-semibold">Cantidad:</span>
+            <div className="flex items-center border border-gray-300 rounded-lg">
+              <button 
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                disabled={getStockQuantity() === 0}
+              >
+                -
+              </button>
+              <span className="px-4 py-2 min-w-[50px] text-center">{quantity}</span>
+              <button 
+                onClick={() => setQuantity(quantity + 1)}
+                className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                disabled={quantity >= getStockQuantity()}
+              >
+                +
+              </button>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
-              Seleccionado: {selectedColor}
-            </p>
           </div>
 
-          {/* 📏 Tallas */}
-          <div className="mt-6">
-            <h2 className="font-semibold mb-2">Talla</h2>
-            <div className="flex gap-3">
-              {producto.sizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`px-4 py-2 border rounded-lg ${
-                    selectedSize === size
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'border-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+          {/* 🎨 Opciones del producto */}
+          {producto.options && producto.options.map((option: any) => (
+            <div key={option.id} className="mt-6">
+              <h2 className="font-semibold mb-2 capitalize">{option.title}</h2>
+              <div className="flex gap-3 flex-wrap">
+                {option.values.map((value: any) => (
+                  <button
+                    key={value.id}
+                    onClick={() => handleOptionChange(option.title, value.value)}
+                    className={`px-4 py-2 border rounded-lg transition ${
+                      selectedOptions[option.title] === value.value
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {value.value}
+                  </button>
+                ))}
+              </div>
             </div>
-            {selectedSize && (
-              <p className="text-sm text-gray-500 mt-1">
-                Talla seleccionada: {selectedSize}
-              </p>
-            )}
-          </div>
+          ))}
 
           {/* 🛒 Botones */}
-          <div className="mt-6 flex gap-4">
-            <button className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition">
-              <ShoppingCart size={20} /> Añadir al carrito
+          <div className="mt-8 flex gap-4">
+            <button 
+              className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={getStockQuantity() === 0}
+            >
+              <ShoppingCart size={20} /> 
+              {getStockQuantity() === 0 ? 'Agotado' : 'Añadir al carrito'}
             </button>
             <button className="flex items-center gap-2 border border-gray-300 px-6 py-3 rounded-xl hover:bg-gray-100 transition">
               <Heart size={20} /> Guardar
             </button>
           </div>
-
-          {/* Características */}
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-3">Características</h2>
-            <ul className="list-disc list-inside text-gray-700 space-y-1">
-              {producto.features.map((f, i) => (
-                <li key={i}>{f}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* 🔹 Productos de la misma tienda */}
-      <div className="mt-12 bg">
-        <h2 className="text-2xl font-semibold mb-4">Productos de la misma tienda</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {producto.related.map((r) => (
-            <div
-              key={r.id}
-              className="border rounded-lg p-4 hover:shadow-lg transition"
-            >
-              <img
-                src={r.imageUrl}
-                alt={r.title}
-                width={300}
-                height={300}
-                className="rounded-md mb-3"
-              />
-              <h3 className="font-semibold">{r.title}</h3>
-              <p className="text-emerald-600 font-semibold">{r.price}</p>
-              <button className="mt-2 w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700">
-                Ver producto
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 🔹 Productos relacionados */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-4">También te puede interesar</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {producto.related.map((r) => (
-            <div
-              key={r.id}
-              className="border rounded-lg p-4 hover:shadow-lg transition"
-            >
-              <img
-                src={r.imageUrl}
-                alt={r.title}
-                width={300}
-                height={300}
-                className="rounded-md mb-3"
-              />
-              <h3 className="font-semibold">{r.title}</h3>
-              <p className="text-emerald-600 font-semibold">{r.price}</p>
-              <button className="mt-2 w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700">
-                Ver producto
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-            {/* 🔹 Opiniones */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-semibold mb-4">Opiniones de clientes</h2>
-        <div className="space-y-4">
-          {producto.reviews.map((review, i) => (
-            <div key={i} className="p-4 border rounded-lg bg-gray-50">
-              <p className="font-semibold">
-                {review.user} ⭐ {review.rating}/5
-              </p>
-              <p className="text-gray-600">{review.comment}</p>
-            </div>
-          ))}
         </div>
       </div>
     </div>

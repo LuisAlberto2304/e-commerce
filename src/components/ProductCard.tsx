@@ -4,6 +4,7 @@ import '../styles/globals.css'
 import Link from "next/link";
 
 export type CardProps = {
+  id: string;
   title: string;
   description: string;
   imageUrl?: string;
@@ -14,6 +15,7 @@ export type CardProps = {
 };
 
 export const ProductCard: React.FC<CardProps> = ({
+  id,
   title,
   description,
   imageUrl,
@@ -23,7 +25,7 @@ export const ProductCard: React.FC<CardProps> = ({
   onAddToCart,
 }) => {
   return (
-    <Link href={`/products/${title}`}>
+    <Link href={`/products/${id}`}>
       
       <div className={'card cursor-pointers'}>
         {label && (

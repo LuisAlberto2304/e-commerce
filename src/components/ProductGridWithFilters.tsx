@@ -137,6 +137,7 @@ export default function ProductGridWithFilters({
           {products.map((prod) => (
             <ProductCard
               key={prod.id}
+              id={prod.id}
               title={prod.title}
               description={prod.description}
               imageUrl={prod.thumbnail}
