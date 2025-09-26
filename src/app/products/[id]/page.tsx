@@ -9,6 +9,10 @@ import { fetchProductById, fetchCategoryById } from '@/app/lib/medusaClient';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import StockStatus from '@/components/StockStatus';
 
+import ProductCarousel from '@/components/ProductCarousel';
+import ProductReviews from '@/components/ProductReviews';
+import { mockRecommendedProducts, mockReviews } from '@/app/data/mockData';
+
 const ProductoDetallePage = () => {
   const params = useParams();
   const id = params.id as string;
@@ -264,6 +268,17 @@ const ProductoDetallePage = () => {
           </div>
         </div>
       </div>
+      <ProductCarousel 
+      products={mockRecommendedProducts}
+      title="También te puede interesar"
+    />
+
+    {/* ⭐ Sistema de Reseñas */}
+    <ProductReviews 
+      reviews={mockReviews}
+      averageRating={4.2} // Puedes calcular esto dinámicamente
+      totalReviews={mockReviews.length}
+    />
     </div>
   );
 };
