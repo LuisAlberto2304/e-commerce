@@ -2,7 +2,7 @@
 
 /* -------------------------------------------------------- Seccion de variables -------------------------------------------------------- */
 @theme {
-  --color-primary-500: #3B82F6; 
+    --color-primary-500: #3B82F6; 
   --color-primary-700: #1D4ED8;
 
   --color-secondary-500: #F43F5E; 
@@ -18,10 +18,10 @@
   --color-warning: #F59E0B;   
 
   /* Tipografía */
-  --font-sans: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; /* texto principal */
-  --font-heading: "Poppins", var(--font-sans); /* títulos */
+  --font-sans: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --font-heading: "Poppins", var(--font-sans);
 
-  /* Espaciado */
+  /* Espaciado - MANTENIDO */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -31,12 +31,12 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  /* Breakpoints */
-  --breakpoint-xs: 30rem; 
-  --breakpoint-sm: 40rem; 
-  --breakpoint-md: 48rem;
-  --breakpoint-lg: 64rem;
-  --breakpoint-xl: 80rem;
+  /* Breakpoints ACTUALIZADOS para coincidir con Tailwind */
+  --breakpoint-xs: 475px; 
+  --breakpoint-sm: 640px; 
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
 }
 
 .dark {
@@ -53,7 +53,7 @@
 }
 
 body {
-  @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans;
+  @apply bg-bg text-text font-sans;
   height: 100%;
   margin: 0;
   display: flex;
@@ -130,95 +130,85 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   /* -------------------------------------------------------- Estilos para los Product Card -------------------------------------------------------- */
-  .card {
-    background: white;
-    border-radius: 1em;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    overflow: hidden;
-    width: 300px;
-    font-family: 'Poppins', sans-serif;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    position: relative;
-  }
+.card {
+  background: white;
+  border-radius: 1em;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  overflow: hidden;
+  width: 100%;
+  font-family: 'Poppins', sans-serif;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
 
-  .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  }
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
 
-  .card-label {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: #ef4444; /* rojo tipo Tailwind */
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 4px 8px;
-    border-radius: 9999px; /* pill */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-  }
+.card-body {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-grow: 1;
+}
 
-  .card-img {
-    width: 100%;
-    height: 180px;
-    object-fit: contain;
-  }
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
 
-  .card-body {
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+.card-description {
+  font-size: 14px;
+  color: #555;
+  margin: 0 0 10px 0;
+}
 
-  .card-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0 0 10px 0;
-    text-align: center;
-  }
+.card-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #16a34a; /* verde Tailwind */
+  margin-bottom: 12px;
+}
 
-  .card-description {
-    font-size: 14px;
-    color: #555;
-    margin: 0 0 10px 0;
-    text-align: center;
-  }
+.card-footer {
+  padding: 10px 15px;
+  background-color: #f1f5f9;
+  font-size: 13px;
+  color: #333;
+  text-align: center;
+}
 
-  .card-price {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--color-primary-700);
-    margin-bottom: 12px;
-  }
+.button {
+  display: inline-block;
+  cursor: pointer;
+  border: 0;
+  border-radius: 3em;
+  font-weight: 700;
+  line-height: 1;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
+}
 
-  .card-footer {
-    padding: 10px 15px;
-    background-color: #f1f5f9;
-    font-size: 13px;
-    color: #333;
-    text-align: center;
-  }
+.button--primary {
+  background-color: #555ab9;
+  color: white;
+  padding: 12px 24px;
+  font-size: 14px;
+  text-align: center;
+}
 
-  .button {
-    display: inline-block;
-    cursor: pointer;
-    border: 0;
-    border-radius: 3em;
-    font-weight: 700;
-    line-height: 1;
-    font-family: 'Poppins', sans-serif;
-    transition: all 0.3s ease;
-  }
-
-  .button--primary {
-    background-color: #555ab9;
-    color: white;
-    padding: 12px 24px;
-    font-size: 14px;
-    text-align: center;
-  }
+/* Grid contenedor para las cards */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+  justify-items: center;
+}
 
   /* -------------------------------------------------------- Estilos para el header --------------------------------------------------------*/
 

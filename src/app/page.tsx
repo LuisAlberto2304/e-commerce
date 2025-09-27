@@ -1,6 +1,7 @@
 import { Button } from '../components/Button'
 import {ProductCard} from '../components/ProductCard'
 import { BannerCarousel } from '../components/Banner'
+import { div } from 'framer-motion/client';
 
 export default function HomePage() {
   const products = [
@@ -31,7 +32,7 @@ export default function HomePage() {
 ];
 
   return (
-    <section >
+    <section>
 
       <BannerCarousel items={banners} />
 
@@ -39,60 +40,82 @@ export default function HomePage() {
         Productos destacados
       </h2>
 
-      <div className="bg-amber-50 p-10 rounded-2xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard
-              key={product.title}
-              title={product.title}
-              description={product.description}
-              price={product.price}
-              imageUrl={product.img}
-            />
-          ))}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Sección 1 */}
+        <div className="bg-amber-50 p-6 rounded-2xl mx-0 justify-items-center"> {/* mx-0 para eliminar márgenes horizontales */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 justify-items-center">
+            {products.map((product) => (
+              <div key={product.id} className="w-full max-w-[280px] ">
+                <ProductCard
+                  id={product.id}
+                  title={product.title}
+                  description={product.description}
+                  price={product.price}
+                  imageUrl={product.img}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <br />
-      <div className="bg-blue-500 p-10 rounded-2xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard
-              key={product.title}
-              title={product.title}
-              description={product.description}
-              price={product.price}
-              imageUrl={product.img}
-            />
-          ))}
+
+        <br />
+
+        {/* Sección 2 */}
+        <div className="bg-blue-500 p-6 rounded-2xl mx-0 justify-items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 justify-items-center">
+            {products.map((product) => (
+              <div key={product.id} className="w-full max-w-[280px]">
+                <ProductCard
+                  id={product.id}
+                  title={product.title}
+                  description={product.description}
+                  price={product.price}
+                  imageUrl={product.img}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <br />
-      <div className="bg-red-200 p-10 rounded-2xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard
-              key={product.title}
-              title={product.title}
-              description={product.description}
-              price={product.price}
-              imageUrl={product.img}
-            />
-          ))}
+
+        <br />
+
+        {/* Sección 3 */}
+        <div className="bg-red-200 p-6 rounded-2xl mx-0 justify-items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 justify-items-center">
+            {products.map((product) => (
+              <div key={product.id} className="w-full max-w-[280px]">
+                <ProductCard
+                  id={product.id}
+                  title={product.title}
+                  description={product.description}
+                  price={product.price}
+                  imageUrl={product.img}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <br />
-      <div className="bg-fuchsia-300 p-10 rounded-2xl">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard
-              key={product.title}
-              title={product.title}
-              description={product.description}
-              price={product.price}
-              imageUrl={product.img}
-            />
-          ))}
+
+        <br />
+
+        {/* Sección 4 */}
+        <div className="bg-fuchsia-300 p-6 rounded-2xl mx-0 justify-items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 justify-items-center">
+            {products.map((product) => (
+              <div key={product.id} className="w-full max-w-[280px]">
+                <ProductCard
+                  id={product.id}
+                  title={product.title}
+                  description={product.description}
+                  price={product.price}
+                  imageUrl={product.img}
+                />
+              </div>
+            ))}
+          </div>
         </div>
+
       </div>
       <p className="mt-6 text-text-secondary text-center">
         ¡Explora nuestra colección completa para encontrar más productos increíbles!
