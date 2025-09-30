@@ -1,73 +1,43 @@
-"use client";
-import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/components/Button";
+/* eslint-disable @next/next/inline-script-id */
+import { generateSeoMetadata } from "../lib/seo";
+import LoginPageClient from "./LoginPageClient";
+import Script from "next/script";
+
+export const metadata = generateSeoMetadata({
+  title: "Login",
+  description: "Inicio de sesión en la página.",
+  slug: "login",
+  canonicanl: "https://e-tianguis.com/login",
+});
+
+// 🔹 Datos estructurados para una página de login
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", position: 1, name: "Inicio", item: "https://e-tianguis.com" },
+      { "@type": "ListItem", position: 2, name: "Login", item: "https://e-tianguis.com/login" }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "E-Tianguis",
+    url: "https://e-tianguis.com",
+    logo: "https://e-tianguis.com/logo.png"
+  }
+];
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log({ email, password });
-  };
-
   return (
-    <main className="login-page">
-      <div className="login-box">
-        <div className="mt-0 mb-5">
-          <Link href="/" >
-          <p className="login-top">
-            ← Regresar al inicio
-          </p>
-
-          </Link>
-        </div>
-        <h1 className="login-title">Iniciar Sesión</h1>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div>
-            <label htmlFor="email" className="login-label">
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="login-input"
-              placeholder="ejemplo@correo.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="login-label">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="login-input"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-            <div className="text-center">
-                <Button variant="primary" size="small" label="Entrar"/>
-            </div>
-        </form>
-
-        <p className="login-footer">
-          ¿No tienes cuenta?{" "}
-          <Link href="/register">
-            Registrate
-          </Link>
-        </p>
-      </div>
-    </main>
+    <>
+      <LoginPageClient />
+      {/* 🔹 Insertar JSON-LD */}
+      <Script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+    </>
   );
 }

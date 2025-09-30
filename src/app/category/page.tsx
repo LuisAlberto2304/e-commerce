@@ -1,63 +1,45 @@
-// app/page.tsx (o donde tengas tu página principal)
-"use client";
-import { useState, useEffect } from "react";
-import FiltersSidebar from "@/components/FiltersSidebar";
-import ProductGridWithFilters from "@/components/ProductGridWithFilters";
+/* eslint-disable @next/next/inline-script-id */
+import { generateSeoMetadata } from "../lib/seo";
+import CategoryPageClient from "./CategoryPageClient";
+import Script from "next/script";
 
-// Función para obtener categorías
-const fetchCategories = async () => {
-  try {
-    const res = await fetch('/api/categories');
-    if (!res.ok) throw new Error('Error fetching categories');
-    return await res.json();
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    return [];
+// 🔹 Metadata estática
+export const metadata = generateSeoMetadata({
+  title: "Categorías",
+  description: "Explora todas las categorías de productos.",
+  slug: "categorias",
+  canonicanl: "https://e-tianguis.com/categorias",
+});
+
+// Datos estructurados para la página de categorías
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", position: 1, name: "Inicio", item: "https://e-tianguis.com" },
+      { "@type": "ListItem", position: 2, name: "Categorías", item: "https://e-tianguis.com/categorias" }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "E-Tianguis",
+    url: "https://e-tianguis.com",
+    logo: "https://e-tianguis.com/logo.png"
   }
-};
+];
 
-export default function HomePage() {
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [filters, setFilters] = useState<{ q?: string; color?: string; size?: string }>({});
-  const [loadingCategories, setLoadingCategories] = useState(true);
-
-  useEffect(() => {
-    const loadCategories = async () => {
-      setLoadingCategories(true);
-      try {
-        const categoriesData = await fetchCategories();
-        setCategories(categoriesData);
-      } catch (error) {
-        console.error('Error loading categories:', error);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-
-    loadCategories();
-  }, []);
-
-  if (loadingCategories) {
-    return <div className="p-4">Cargando categorías...</div>;
-  }
-
+// Server Component
+export default function CategoryPage() {
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <FiltersSidebar
-        categories={categories}
-        selectedCategoryId={selectedCategoryId}
-        setSelectedCategoryId={setSelectedCategoryId}
-        setFilters={setFilters}
-        currentFilters={filters}
+    <>
+      <CategoryPageClient />
+      {/* 🔹 Insertar JSON-LD */}
+      <Script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      
-      <main className="flex-1 p-6">
-        <ProductGridWithFilters 
-          categoryId={selectedCategoryId}
-          filters={filters}
-        />
-      </main>
-    </div>
+    </>
   );
 }

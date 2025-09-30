@@ -1,135 +1,43 @@
-"use client";
-import Link from "next/link";
-import { useState } from "react";
-import { Button } from "@/components/Button";
+/* eslint-disable @next/next/inline-script-id */
+import { generateSeoMetadata } from "../lib/seo";
+import RegisterLoginClient from "./RegisterPageClient";
+import Script from "next/script";
 
-export default function RegisterLogin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [apellidoPaterno, setApellidoPaterno] = useState("");
-  const [apellidoMaterno, setApellidoMaterno] = useState("");
+export const metadata = generateSeoMetadata({
+  title: "Register",
+  description: "Registro del usuario en la plataforma.",
+  slug: "register",
+  canonicanl: "https://e-tianguis.com/registro",
+});
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log({ email, password });
-  };
+// 🔹 Datos estructurados para página de registro
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Inicio", item: "https://e-tianguis.com" },
+      { "@type": "ListItem", position: 2, name: "Registro", item: "https://e-tianguis.com/registro" },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "E-Tianguis",
+    url: "https://e-tianguis.com",
+    logo: "https://e-tianguis.com/logo.png",
+  },
+];
 
+export default function RegisterPage() {
   return (
-    <main className="login-page">
-      <div className="login-box">
-        <div className="mt-0 mb-5">
-          <Link href="/" >
-          <p className="login-top">
-            ← Regresar al inicio
-          </p>
-
-          </Link>
-        </div>
-        <h1 className="login-title">Registrate</h1>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div>
-            <div>
-            <label htmlFor="email" className="login-label">
-              Nombre
-            </label>
-            <input
-              id="nombre"
-              type="text"
-              value={nombre}
-              onChange={(e) => setEmail(e.target.value)}
-              className="login-input mb-5"
-              placeholder="Nombre"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="email" className="login-label">
-              Apellido Paterno
-            </label>
-            <input
-              id="apellido"
-              type="text"
-              value={apellidoPaterno}
-              onChange={(e) => setEmail(e.target.value)}
-              className="login-input mb-5"
-              placeholder="Apellido Paterno"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="login-label">
-              Apellido Materno
-            </label>
-            <input
-              id="apellidoMaterno"
-              type="text"
-              value={apellidoMaterno}
-              onChange={(e) => setEmail(e.target.value)}
-              className="login-input mb-5"
-              placeholder="Apellido Materno"
-              required
-            />
-          </div>
-
-            <label htmlFor="email" className="login-label">
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="login-input"
-              placeholder="ejemplo@correo.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="login-label">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="login-input"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="login-label">
-              Confirmar contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="login-input"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-            <div className="text-center">
-                <Button variant="primary" size="small" label="Entrar"/>
-            </div>
-        </form>
-
-        <p className="login-footer">
-          ¿Tienes una cuenta?{" "}
-          <Link href="/login">
-            Incia sesion
-          </Link>
-        </p>
-      </div>
-    </main>
+    <>
+      <RegisterLoginClient />
+      {/* 🔹 Insertar JSON-LD */}
+      <Script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+    </>
   );
 }

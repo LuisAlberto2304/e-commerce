@@ -1,4 +1,13 @@
-// app/lib/medusaClient.ts
+function getBaseUrl() {
+  if (typeof window !== "undefined") {
+    // ✅ Navegador -> usar ruta relativa
+    return "";
+  }
+
+  // ✅ Servidor -> usar dominio absoluto
+  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+}
+
 export async function fetchProducts(filters: {
   categoryId?: string;
   q?: string;
@@ -39,12 +48,12 @@ export async function fetchProducts(filters: {
 }
 
 export async function fetchProductById(id: string) {
-  const url = `/api/products/${id}`;
+  const url = `${getBaseUrl()}/api/products/${id}`;
   console.log("📡 Llamando a API:", url);
 
   try {
-    const res = await fetch(url);
-    
+    const res = await fetch(url, { cache: "no-store" }); // no-cache para datos dinámicos
+
     if (!res.ok) {
       const errorText = await res.text();
       console.error("❌ Error en respuesta:", res.status, errorText);
@@ -53,17 +62,17 @@ export async function fetchProductById(id: string) {
 
     const data = await res.json();
     console.log("✅ Respuesta completa de API:", data);
-    
-    // CORRECCIÓN: Extraer el producto de la propiedad `product`
+
     const product = data.product || data;
     console.log("✅ Producto extraído:", product?.title || "Sin título");
-    
+
     return product;
   } catch (error) {
     console.error("🚨 Error en fetchProductById:", error);
     throw error;
   }
 }
+
 
 
 export async function fetchCategoryById(id: string) {
