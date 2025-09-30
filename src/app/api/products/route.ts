@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     console.log("🔍 Llamando a Medusa con:", medusaParams.toString());
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/store/products?${medusaParams.toString()}`,
+      `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/products?${medusaParams.toString()}`,
       {
         headers: {
           "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY!,

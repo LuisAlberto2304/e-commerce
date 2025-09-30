@@ -1,11 +1,16 @@
 function getBaseUrl() {
-  if (typeof window !== "undefined") {
-    // ✅ Navegador -> usar ruta relativa
-    return "";
+  // Siempre usar URL absoluta para evitar problemas
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
   }
-
-  // ✅ Servidor -> usar dominio absoluto
-  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  
+  // En producción Vercel/Netlify
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // Desarrollo local
+  return "http://localhost:3000";
 }
 
 export async function fetchProducts(filters: {
@@ -16,17 +21,17 @@ export async function fetchProducts(filters: {
   limit?: number;
   offset?: number;
 } = {}) {
+  const baseUrl = getBaseUrl();
   const params = new URLSearchParams();
   
   if (filters.categoryId) params.append('categoryId', filters.categoryId);
   if (filters.q) params.append('q', filters.q);
-  // Solo enviar color y size si tienen valor
   if (filters.color && filters.color.trim() !== '') params.append('color', filters.color);
   if (filters.size && filters.size.trim() !== '') params.append('size', filters.size);
   if (filters.limit) params.append('limit', filters.limit.toString());
   if (filters.offset) params.append('offset', filters.offset.toString());
 
-  const url = `/api/products?${params.toString()}`;
+  const url = `${baseUrl}/api/products?${params.toString()}`;
   console.log('📡 Llamando a API con URL:', url);
 
   try {
@@ -48,13 +53,41 @@ export async function fetchProducts(filters: {
 }
 
 export async function fetchProductById(id: string) {
-  const url = `${getBaseUrl()}/api/products/${id}`;
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/products/${id}`;
   console.log("📡 Llamando a API:", url);
 
   try {
-    const res = await fetch(url, { cache: "no-store" }); // no-cache para datos dinámicos
+    const res = await fetch(url, { 
+      cache: "no-store",
+    });
 
+    console.log("📊 Status de respuesta:", res.status);
+    
     if (!res.ok) {
+      // Si es 404, intentamos buscar en la lista completa
+      if (res.status === 404) {
+        console.log("🔍 Producto no encontrado individualmente, buscando en lista...");
+        
+        // Buscar en lista completa
+        const listUrl = `${baseUrl}/api/products?limit=200`;
+        const listRes = await fetch(listUrl, { cache: "no-store" });
+        
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const productFromList = listData.products?.find((p: any) => p.id === id);
+          
+          if (productFromList) {
+            console.log("✅ Producto encontrado en lista completa");
+            return productFromList;
+          }
+        }
+        
+        console.log("❌ Producto no encontrado en ningún lugar");
+        return null;
+      }
+      
       const errorText = await res.text();
       console.error("❌ Error en respuesta:", res.status, errorText);
       throw new Error(`Failed to fetch product: ${res.status}`);
@@ -64,19 +97,23 @@ export async function fetchProductById(id: string) {
     console.log("✅ Respuesta completa de API:", data);
 
     const product = data.product || data;
-    console.log("✅ Producto extraído:", product?.title || "Sin título");
+    
+    if (!product) {
+      console.error("🚨 No se encontró producto en la respuesta");
+      return null;
+    }
 
+    console.log("✅ Producto extraído:", product.title || product.id);
     return product;
   } catch (error) {
     console.error("🚨 Error en fetchProductById:", error);
-    throw error;
+    return null;
   }
 }
 
-
-
 export async function fetchCategoryById(id: string) {
-  const url = `/api/categories/${id}`;
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/categories/${id}`;
   console.log("📡 Llamando a categoría API:", url);
 
   try {
@@ -97,7 +134,8 @@ export async function fetchCategoryById(id: string) {
 }
 
 export async function fetchCategories() {
-  const url = `/api/categories`;
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}/api/categories`;
   console.log("📡 Llamando a categorías API:", url);
 
   try {

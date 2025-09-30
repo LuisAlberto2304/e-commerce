@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 
 const MEDUSA_BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
@@ -10,7 +11,9 @@ export async function GET(
   try {
     const { id } = await params;
     
-    console.log("🔍 Fetching product ID:", id);
+    console.log("🔍 ========== DEBUG PRODUCTO INDIVIDUAL ==========");
+    console.log("🔍 ID recibido:", id);
+    console.log("🔍 Medusa URL:", MEDUSA_BACKEND_URL);
 
     if (!MEDUSA_BACKEND_URL) {
       return NextResponse.json(
@@ -19,28 +22,59 @@ export async function GET(
       );
     }
 
-    const url = `${MEDUSA_BACKEND_URL}/store/products/${id}`;
-    console.log("🔍 Calling Medusa:", url);
+    // Primero, vamos a listar TODOS los productos para debug
+    console.log("🔍 Listando todos los productos para debug...");
+    const listUrl = `${MEDUSA_BACKEND_URL}/products?limit=100`;
+    const listRes = await fetch(listUrl, {
+      headers: MEDUSA_API_KEY ? { "x-publishable-api-key": MEDUSA_API_KEY } : {},
+    });
+
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      const allProducts = listData.products || [];
+      console.log(`🔍 Total de productos en Medusa: ${allProducts.length}`);
+      
+      // Buscar el producto específico en la lista
+      const foundProduct = allProducts.find((p: any) => p.id === id);
+      console.log("🔍 Producto encontrado en lista:", foundProduct ? "SÍ" : "NO");
+      
+      if (foundProduct) {
+        console.log("🔍 Producto en lista:", {
+          id: foundProduct.id,
+          title: foundProduct.title,
+          status: foundProduct.status,
+          variants: foundProduct.variants?.length
+        });
+      } else {
+        console.log("🔍 IDs disponibles:", allProducts.map((p: any) => p.id));
+      }
+    }
+
+    // Ahora intentamos obtener el producto individual
+    console.log("🔍 Intentando obtener producto individual...");
+    const url = `${MEDUSA_BACKEND_URL}/products/${id}`;
+    console.log("🔍 URL individual:", url);
 
     const res = await fetch(url, {
-      headers: MEDUSA_API_KEY
-        ? { "x-publishable-api-key": MEDUSA_API_KEY }
-        : {},
+      headers: MEDUSA_API_KEY ? { "x-publishable-api-key": MEDUSA_API_KEY } : {},
     });
+
+    console.log("📊 Status individual:", res.status);
 
     if (!res.ok) {
       const errorText = await res.text();
-      console.error("❌ Medusa error:", res.status, errorText);
+      console.error("❌ Error de Medusa individual:", res.status, errorText);
+      
       return NextResponse.json(
-        { error: "Failed to fetch product" },
-        { status: res.status }
+        { error: `Product not found: ${id}` },
+        { status: 404 }
       );
     }
 
     const data = await res.json();
+    console.log("✅ Respuesta individual completa:", JSON.stringify(data, null, 2));
     
-    // CORRECCIÓN: Devolver el producto directamente en lugar de data.product
-    return NextResponse.json(data.product || data);
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error("🚨 API route error:", error);
