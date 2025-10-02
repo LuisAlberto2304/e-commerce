@@ -1,27 +1,80 @@
-'use client'
+// app/layout.tsx - SERVER COMPONENT
 import '../styles/globals.css'
-import { usePathname } from "next/navigation";
-import { Header } from '../components/Header'
-import { Footer } from '../components/Footer'
+import { Inter, Roboto } from 'next/font/google'
+import { PerformanceMetrics } from '../components/PerformanceMetrics'
+import LayoutContent from './LayoutContent'
 
+// 🔹 Configuración optimizada de fuentes
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  preload: true,
+  adjustFontFallback: false,
+})
+
+const roboto = Roboto({
+  weight: ['400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto',
+})
+
+// 🔹 Metadata estática para SEO
+export const metadata = {
+  title: {
+    default: 'E-Tianguis - Tu mercado en línea',
+    template: '%s | E-Tianguis'
+  },
+  description: 'Explora todas las categorías de productos en E-Tianguis.',
+  keywords: 'tienda online, mercado, productos, compras',
+  authors: [{ name: 'E-Tianguis' }],
+  creator: 'E-Tianguis',
+  metadataBase: new URL('https://e-tianguis.com'),
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    url: 'https://e-tianguis.com',
+    siteName: 'E-Tianguis',
+    title: 'E-Tianguis - Tu mercado en línea',
+    description: 'Explora todas las categorías de productos en E-Tianguis.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
+
+// SERVER COMPONENT - No necesita 'use client'
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const noHeaderRoutes = ["/login", "/register"];
-  const showHeader = !noHeaderRoutes.includes(pathname);
-
   return (
-    <html lang="es">
-      <body className="bg-bg text-text font-sans min-h-screen flex flex-col">
-        {showHeader && <Header />}
+    <html lang="es" className={`${inter.variable} ${roboto.variable}`}>
+      <head>
+        {/* 🔹 Preconnect para dominios críticos */}
+        <link rel="preconnect" href="https://cdn.e-tianguis.com" />
+        <link rel="dns-prefetch" href="https://cdn.e-tianguis.com" />
         
-        {/* CONTENIDO CON ANCHO COMPLETO */}
-        <main className="flex-1 w-full">
-          <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-            {children}
-          </div>
-        </main>
+        {/* 🔹 Preload para fuentes críticas si es necesario */}
+        <link
+          rel="preload"
+          href="/api/health"
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body className={`${inter.className} bg-bg text-text min-h-screen flex flex-col antialiased`}>
+        {/* 🔹 Client Component para lógica de ruta */}
+        <LayoutContent>{children}</LayoutContent>
         
-        <Footer />
+        {/* 🔹 Métricas de performance */}
+        <PerformanceMetrics />
       </body>
     </html>
   )

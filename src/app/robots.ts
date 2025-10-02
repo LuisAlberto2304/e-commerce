@@ -1,23 +1,13 @@
+// app/robots.ts - FORMATO CORRECTO
 import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [
-    {
+    rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/admin/"],
+      disallow: ["/api/", "/admin/", "/api/secret/", "/login"],
     },
-    {
-    userAgent: "Googlebot",
-    allow: "/",
-    disallow: "/login",
-    },
-    {
-      userAgent: "facebookexternalhit",
-      allow: "/"
-    }
-    ],
     sitemap: "https://e-tianguis.com/sitemap.xml",
   };
 }

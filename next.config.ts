@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
     domains: [
       "d1fufvy4xao6k9.cloudfront.net",
       "etianguis.s3.us-east-2.amazonaws.com",
+      "png.pngtree.com",
+      "www.oxiclean.com",
+      "www.lakeland.com",
     ],
     remotePatterns: [
       {
