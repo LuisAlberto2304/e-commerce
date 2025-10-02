@@ -29,20 +29,23 @@ export async function GET(req: NextRequest) {
     console.log("🔍 Llamando a Medusa con:", medusaParams.toString());
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/products?${medusaParams.toString()}`,
-      {
-        headers: {
-          "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY!,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("❌ Error de Medusa:", res.status, errorText);
-      return NextResponse.json({ error: "No se pudieron obtener los productos de Medusa" }, { status: 500 });
+    `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/products?${medusaParams.toString()}`,
+    {
+      headers: {
+        "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY || "",
+        "Content-Type": "application/json",
+      },
     }
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("❌ Error de Medusa:", res.status, errorText);
+    return NextResponse.json(
+      { error: "No se pudieron obtener los productos de Medusa", details: errorText },
+      { status: res.status }
+    );
+  }
 
     const data = await res.json();
     let products = data.products || [];

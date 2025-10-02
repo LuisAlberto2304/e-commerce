@@ -12,7 +12,11 @@ export default function robots(): MetadataRoute.Robots {
     userAgent: "Googlebot",
     allow: "/",
     disallow: "/login",
-  }
+    },
+    {
+      userAgent: "facebookexternalhit",
+      allow: "/"
+    }
     ],
     sitemap: "https://e-tianguis.com/sitemap.xml",
   };

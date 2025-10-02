@@ -52,7 +52,7 @@ export async function GET(
 
     // Ahora intentamos obtener el producto individual
     console.log("🔍 Intentando obtener producto individual...");
-    const url = `${MEDUSA_BACKEND_URL}/products/${id}`;
+    const url = `${MEDUSA_BACKEND_URL}/products/${id}?expand=variants,variants.options,variants.prices,variants.images`;
     console.log("🔍 URL individual:", url);
 
     const res = await fetch(url, {

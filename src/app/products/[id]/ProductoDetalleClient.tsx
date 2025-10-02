@@ -10,6 +10,7 @@ import StockStatus from "@/components/StockStatus";
 import ProductCarousel from "@/components/ProductCarousel";
 import ProductReviews from "@/components/ProductReviews";
 import { mockRecommendedProducts, mockReviews } from "@/app/data/mockData";
+import Image from "next/image";
 
 type Props = { 
   id: string;
@@ -228,9 +229,9 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   };
 
   const handlePrevImage = () => {
-    if (productImages.length > 1) {
+    if (productImages.length > 1 && selectedImage) {
       const currentIndex = productImages.findIndex((img: any) => 
-        getAbsoluteImageUrl(img.url) === absoluteSelectedImage
+        getAbsoluteImageUrl(img.url) === selectedImage
       );
       const prevIndex = currentIndex === 0 ? productImages.length - 1 : currentIndex - 1;
       handleImageChange(productImages[prevIndex].url);
@@ -238,14 +239,20 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   };
 
   const handleNextImage = () => {
-    if (productImages.length > 1) {
+    if (productImages.length > 1 && selectedImage) {
       const currentIndex = productImages.findIndex((img: any) => 
-        getAbsoluteImageUrl(img.url) === absoluteSelectedImage
+        getAbsoluteImageUrl(img.url) === selectedImage
       );
       const nextIndex = currentIndex === productImages.length - 1 ? 0 : currentIndex + 1;
       handleImageChange(productImages[nextIndex].url);
     }
   };
+
+  const [imgSrc, setImgSrc] = useState(
+    absoluteSelectedImage ||
+    getAbsoluteImageUrl(productImages[0]?.url) ||
+    "/placeholder-image.jpg"
+  );
 
   if (loading) return <div className="max-w-6xl mx-auto p-6 text-center">Cargando producto...</div>;
   if (error) return <div className="max-w-6xl mx-auto p-6 text-center text-red-600">{error}</div>;
@@ -256,22 +263,24 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
       <Breadcrumbs items={breadcrumbItems} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mt-6">
-        {/* 📷 Galería */}
+      {/* 📷 Galería */}
         <div className="w-full">
           <div className="relative bg-gray-100 rounded-2xl flex items-center justify-center min-h-[400px]">
-            {productImages.length > 0 ? (
+            {productImages.length > 0 && selectedImage ? (
               <>
                 <div className="w-full aspect-square sm:aspect-[4/3] flex items-center justify-center">
-                <img
-                  src={absoluteSelectedImage || getAbsoluteImageUrl(productImages[0]?.url) || '/placeholder-image.jpg'}
-                  alt={producto.title}
-                  className="w-full h-full object-contain rounded-lg"
-                  onError={(e) => {
-                    console.error("❌ Error cargando imagen:", absoluteSelectedImage);
-                    e.currentTarget.src = '/placeholder-image.jpg';
-                  }}
-                  onLoad={() => console.log("✅ Imagen cargada correctamente")}
-                />
+                  <Image
+                    src={selectedImage}
+                    alt={producto.title}
+                    width={600}
+                    height={600}
+                    className="w-full h-full object-contain rounded-lg"
+                    onError={() => {
+                      console.error("❌ Error cargando imagen:", selectedImage);
+                      setSelectedImage("/placeholder-image.jpg");
+                    }}
+                    onLoad={() => console.log("✅ Imagen cargada correctamente")}
+                  />
                 </div>
 
                 {/* Controles móviles */}
@@ -279,13 +288,13 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                   <>
                     <button
                       onClick={handlePrevImage}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-3 rounded-full shadow-md lg:hidden"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-3 rounded-full shadow-md lg:hidden z-10"
                     >
                       ‹
                     </button>
                     <button
                       onClick={handleNextImage}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-3 rounded-full shadow-md lg:hidden"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-3 rounded-full shadow-md lg:hidden z-10"
                     >
                       ›
                     </button>
@@ -309,19 +318,20 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                   <button
                     key={img.id || idx}
                     onClick={() => handleImageChange(img.url)}
-                    className={`flex-shrink-0 border-2 rounded-lg p-1 ${
-                      absoluteSelectedImage === absoluteUrl ? 'border-emerald-500' : 'border-transparent'
+                    className={`flex-shrink-0 border-2 rounded-lg p-1 transition-all duration-200 ${
+                      selectedImage === absoluteUrl 
+                        ? 'border-emerald-500 ring-2 ring-emerald-200' 
+                        : 'border-transparent hover:border-gray-300'
                     }`}
                   >
                     <img
-                      src={absoluteSelectedImage || getAbsoluteImageUrl(productImages[0]?.url) || '/placeholder-image.jpg'}
-                      alt={producto.title}
-                      className="w-full h-full object-contain rounded-lg"
+                      src={absoluteUrl || '/placeholder-image.jpg'}
+                      alt={`${producto.title} - imagen ${idx + 1}`}
+                      className="w-20 h-20 object-contain rounded-lg"
                       onError={(e) => {
-                        console.error("❌ Error cargando imagen:", absoluteSelectedImage);
+                        console.error("❌ Error cargando miniatura:", absoluteUrl);
                         e.currentTarget.src = '/placeholder-image.jpg';
                       }}
-                      onLoad={() => console.log("✅ Imagen cargada correctamente")}
                     />
                   </button>
                 );

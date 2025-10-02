@@ -16,14 +16,22 @@ export interface HeaderProps {
 }
 
 export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps) => {
-  const [open, setOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
 
   return (
-    <header className="bg-blue-700 shadow-md">
-      {/* Primera fila: logo y login */}
-      <div className="flex justify-between items-center px-6 py-4">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
+    <header className="header">
+      {/* Contenedor principal */}
+      <div className="header__content">
+        {/* Logo y marca */}
+        <div className="header__brand">
           <svg
             width="32"
             height="32"
@@ -45,43 +53,79 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
               />
             </g>
           </svg>
-          <Link href="/">
-            <h1 className="text-xl font-bold">E-tianguis</h1>
+          <Link href="/" onClick={closeMenu}>
+            <h1>E-tianguis</h1>
           </Link>
         </div>
 
-        {/* Botones login/register */}
-        <div className="flex gap-3">
-          {user ? (
-            <>
-              <span className="text-gray-700">
-                Bienvenido, <b>{user.name}</b>!
-              </span>
-              <Button size="small" onClick={onLogout} label="Cerrar Sesión" />
-            </>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="secondary" size="medium" label="Iniciar Sesión" />
-              </Link>
-              <Link href="/register">
-                <Button variant="secondary" size="medium" label="Registrarte" />
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+        {/* Botón menú hamburguesa - Solo en móvil */}
+        <button 
+          className={`header__menu-toggle ${isMenuOpen ? 'header__menu-toggle--open' : ''}`}
+          onClick={toggleMenu}
+          aria-label="Menú principal"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
 
-      {/* Segunda fila: menú categorías */}
-      <nav className="bg-blue-100 border-black border-1">
-        <ul className="flex gap-6 px-6 py-3 text-black font-medium justify-center items-center">
-          <li>
-            <Link href="/category" className="hover:text-blue-600">
+        {/* Navegación */}
+        <nav className={`header__nav ${isMenuOpen ? 'header__nav--open' : ''}`}>
+          {/* Menú de categorías */}
+          <div className="header__categories">
+            <Link href="/category" onClick={closeMenu} className="header__category-link">
               Todos los productos
             </Link>
-          </li>
-        </ul>
-      </nav>
+            {/* Puedes agregar más categorías aquí */}
+          </div>
+
+          {/* Sección de usuario */}
+          <div className="header__user-section">
+            {user ? (
+              <>
+                <span className="header__welcome">
+                  Bienvenido, <b>{user.name}</b>!
+                </span>
+                <div className="header__buttons">
+                  <Button 
+                    size="small" 
+                    onClick={() => {
+                      onLogout?.();
+                      closeMenu();
+                    }} 
+                    label="Cerrar Sesión" 
+                  />
+                </div>
+              </>
+            ) : (
+              // Botones estilo glassmorphism
+              // Botones con iconos SVG
+              <div className="header__buttons">
+                <Link href="/login" onClick={closeMenu}>
+                  <button className="btn-icon-login">
+                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <span>Iniciar Sesión</span>
+                  </button>
+                </Link>
+                <Link href="/register" onClick={closeMenu}>
+                  <button className="btn-icon-register">
+                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="8.5" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                      <line x1="20" y1="8" x2="20" y2="14" stroke="currentColor" strokeWidth="2"/>
+                      <line x1="23" y1="11" x2="17" y2="11" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                    <span>Registrarte</span>
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </nav>
+      </div>
     </header>
   );
 }

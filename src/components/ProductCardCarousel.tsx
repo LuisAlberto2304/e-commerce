@@ -56,15 +56,15 @@ export const ProductCard: React.FC<CardProps> = ({
     onAddToCart?.();
   };
 
-   return (
+  return (
     <Link href={`/products/${id}`} className="block w-full">
-      {/* Contenedor principal - se aplicarán los estilos CSS */}
-      <div className={`card ${className}`}>
+      {/* Contenedor principal con clases actualizadas */}
+      <div className={`card-carousel ${className}`}>
         
-        {/* Contenedor de imagen - importante agregar la clase relative */}
+        {/* Contenedor de imagen */}
         <div className="relative w-full aspect-[1/1] overflow-hidden">
           {label && (
-            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow z-10">
               {label}
             </span>
           )}
@@ -73,36 +73,41 @@ export const ProductCard: React.FC<CardProps> = ({
             <Image
               src={imageUrl}
               alt={title}
-              width={500}   // ajusta según tu diseño
-              height={500}  // ajusta según tu diseño
-              className="w-full h-full object-cover rounded-lg"
+              width={500}
+              height={500}
+              className="w-full h-full object-cover rounded-lg transition-transform duration-300 hover:scale-105"
             />
           ) : (
-            <div className="flex items-center justify-center bg-gray-200 w-full h-full">
+            <div className="flex items-center justify-center bg-gray-200 w-full h-full rounded-lg">
               <span className="text-gray-500">Sin imagen</span>
             </div>
           )}
         </div>
 
-        {/* Contenido - se mantiene igual, el CSS se encargará */}
-        <div className="card-body">
+        {/* Contenido con clases actualizadas */}
+        <div className="card-body-carousel">
           {rating > 0 && renderStars()}
-          <h2 className="card-title">{title}</h2>
-          <p className="card-description">{description}</p>
+          <h2 className="card-title-carousel">{title}</h2>
+          <p className="card-description-carousel">{description}</p>
 
           <div className="flex items-center space-x-2 mb-3">
-            <span className="card-price">{price}</span>
+            <span className="card-price-carousel">{price}</span>
+            {originalPrice && (
+              <span className="text-sm text-gray-500 line-through">
+                ${originalPrice}
+              </span>
+            )}
           </div>
 
           <button
             onClick={handleAddToCart}
-            className="button button--primary w-full"
+            className="button-carousel button--primary-carousel w-full mt-auto"
           >
             Comprar
           </button>
         </div>
 
-        {footerText && <div className="card-footer">{footerText}</div>}
+        {footerText && <div className="card-footer-carousel">{footerText}</div>}
       </div>
     </Link>
   );

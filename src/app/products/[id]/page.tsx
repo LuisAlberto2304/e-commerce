@@ -17,12 +17,38 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     }
 
     const productUrl = `https://e-tianguis.com/producto/${product.id}`;
+    const imageUrl = 
+  product.images?.[0]?.url || 
+  product.thumbnail || 
+  "https://e-tianguis.com/placeholder.jpg";
+
 
     return {
       title: product.title,
       description: product.description,
       alternates: {
         canonical: productUrl,
+      },
+      openGraph: {
+        type: "website",
+        url: productUrl,
+        title: product.title,
+        description: product.description,
+        siteName: "E-Tianguis",
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: product.title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: product.title,
+        description: product.description,
+        images: [imageUrl],
       },
     };
   } catch (error) {

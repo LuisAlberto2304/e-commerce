@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
-import ProductCard, { CardProps } from './ProductCard';
+import ProductCardCarousel, { CardProps } from './ProductCardCarousel';
 
 interface ProductCarouselProps {
   products: CardProps[];
@@ -165,7 +165,7 @@ const ProductCarousel = ({ products, title, className = '' }: ProductCarouselPro
                 flexShrink: 0
               }}
             >
-              <ProductCard {...product} />
+              <ProductCardCarousel {...product} />
             </div>
           ))}
         </div>
