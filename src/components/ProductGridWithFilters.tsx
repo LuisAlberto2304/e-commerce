@@ -1,58 +1,106 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// components/ProductGridWithFilters.tsx
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { fetchProducts } from "@/app/lib/medusaClient";
 import { ProductCard } from "./ProductCard";
 
+type Filters = { q?: string; color?: string; size?: string; category?: string };
+
 type ProductGridWithFiltersProps = {
-  categoryId: string | null;
-  filters: {
-    q?: string;
-    color?: string;
-    size?: string;
-  };
+  filters: Filters;
+  setFilters: React.Dispatch<React.SetStateAction<Filters>>; // Añadir esta prop
 };
 
-export default function ProductGridWithFilters({ 
-  categoryId, 
-  filters 
-}: ProductGridWithFiltersProps) {
+export default function ProductGridWithFilters({ filters, setFilters }: ProductGridWithFiltersProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar productos desde Medusa con TODOS los filtros
-  useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        console.log('🔄 Cargando productos con filtros:', { categoryId, ...filters });
-        
-        const data = await fetchProducts({ 
-          categoryId: categoryId ?? undefined,
-          q: filters.q,
-          color: filters.color,
-          size: filters.size,
-          limit: 100 // Aumentar límite para mejor filtrado
-        });
-        
-        setProducts(data.products || []);
-        console.log('✅ Productos cargados exitosamente:', data.products?.length || 0);
-      } catch (err: any) {
-        console.error('❌ Error loading products:', err);
-        setError(err.message || "No se pudieron obtener los productos");
-      } finally {
-        setLoading(false);
-      }
+  const normalized = useMemo(() => {
+    const normalizedFilters = {
+      q: filters.q?.trim() || undefined,
+      color: filters.color?.trim() || undefined,
+      size: filters.size?.trim() || undefined,
+      category: filters.category?.trim() || undefined,
     };
-
-    // Debounce para evitar muchas llamadas rápidas
-    const timeoutId = setTimeout(loadProducts, 300);
     
-    return () => clearTimeout(timeoutId);
-  }, [categoryId, filters.q, filters.color, filters.size]);
+    console.log("🔄 Filtros normalizados:", normalizedFilters);
+    return normalizedFilters;
+  }, [filters.q, filters.color, filters.size, filters.category]);
+
+  useEffect(() => {
+  let mounted = true;
+  
+  const loadProducts = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log("🔄 Enviando filtros a la API:", {
+        categoryId: normalized.category,
+        q: normalized.q,
+        color: normalized.color,
+        size: normalized.size,
+        limit: 100,
+      });
+
+      const data = await fetchProducts({
+        categoryId: normalized.category,
+        q: normalized.q,
+        color: normalized.color,
+        size: normalized.size,
+        limit: 100,
+      });
+
+      if (!mounted) return;
+      
+      console.log("✅ Respuesta de la API:", {
+        totalProducts: data.products?.length || 0,
+        filtersApplied: normalized,
+        products: data.products // Ver estructura real
+      });
+      
+      setProducts(data.products || []);
+      if (data.products && data.products.length > 0) {
+      console.log("🔍 Estructura del primer producto:", {
+        id: data.products[0].id,
+        title: data.products[0].title,
+        category: data.products[0].category, // Ver si existe esta propiedad
+        categories: data.products[0].categories, // O esta
+        metadata: data.products[0].metadata, // O en metadata
+      });
+    }
+      
+    } catch (err: any) {
+      console.error("❌ Error cargando productos:", err);
+      if (mounted) {
+        setError(err?.message || "Error al obtener productos");
+        setProducts([]);
+      }
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  };
+
+  const timeoutId = setTimeout(loadProducts, 300);
+  
+  return () => {
+    mounted = false;
+    clearTimeout(timeoutId);
+  };
+}, [normalized]);
+
+  // Función para limpiar filtros individuales
+  const clearFilter = (filterKey: keyof Filters) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      delete newFilters[filterKey];
+      return newFilters;
+    });
+  };
+
+  const hasActiveFilters = Object.keys(normalized).some(key => normalized[key as keyof typeof normalized] !== undefined);
+  const noResults = !loading && products.length === 0;
 
   if (loading) {
     return (
@@ -78,78 +126,129 @@ export default function ProductGridWithFilters({
     );
   }
 
-  const hasActiveFilters = categoryId || filters.q || filters.color || filters.size;
-  const noResults = products.length === 0;
-
   return (
     <div>
-      {/* Información del estado de filtros */}
+      {/* Panel de estado y filtros activos */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <p className="text-sm text-gray-600">
           {noResults && hasActiveFilters ? (
-            <span className="text-red-500">
-              ❌ No hay productos que coincidan con los filtros aplicados.
-            </span>
+            <span className="text-red-500">❌ No hay productos que coincidan con los filtros.</span>
           ) : noResults ? (
-            <span className="text-gray-500">
-              📭 No hay productos disponibles.
-            </span>
+            <span className="text-gray-500">📭 No hay productos disponibles.</span>
           ) : hasActiveFilters ? (
-            <span className="text-green-600">
-              ✅ Mostrando {products.length} productos filtrados.
-            </span>
+            <span className="text-green-600">✅ Mostrando {products.length} productos filtrados.</span>
           ) : (
-            <span className="text-gray-600">
-              📦 Mostrando todos los {products.length} productos.
-            </span>
+            <span className="text-gray-600">📦 Mostrando todos los {products.length} productos.</span>
           )}
         </p>
-        
-        {/* Mostrar filtros activos */}
+
         {hasActiveFilters && (
           <div className="mt-2 text-xs text-gray-500">
             <strong>Filtros activos:</strong>
             <div className="flex flex-wrap gap-2 mt-1">
-              {categoryId && <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">Categoría</span>}
-              {filters.q && <span className="bg-green-100 text-green-800 px-2 py-1 rounded">Búsqueda: {filters.q}</span>}
-              {filters.color && <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">Color: {filters.color}</span>}
-              {filters.size && <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded">Talla: {filters.size}</span>}
+              {normalized.category && (
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
+                  Categoría: {normalized.category}
+                  <button 
+                    onClick={() => clearFilter('category')}
+                    className="text-blue-600 hover:text-blue-800 font-bold"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {normalized.q && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+                  Búsqueda: {normalized.q}
+                  <button 
+                    onClick={() => clearFilter('q')}
+                    className="text-green-600 hover:text-green-800 font-bold"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {normalized.color && (
+                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded flex items-center gap-1">
+                  Color: {normalized.color}
+                  <button 
+                    onClick={() => clearFilter('color')}
+                    className="text-purple-600 hover:text-purple-800 font-bold"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {normalized.size && (
+                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded flex items-center gap-1">
+                  Talla: {normalized.size}
+                  <button 
+                    onClick={() => clearFilter('size')}
+                    className="text-orange-600 hover:text-orange-800 font-bold"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
             </div>
           </div>
         )}
       </div>
 
       {/* Grid de productos */}
-      {noResults && hasActiveFilters ? (
+      {noResults ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">😕</div>
           <h3 className="text-xl font-semibold mb-2">No se encontraron productos</h3>
-          <p className="text-gray-600 mb-4">
-            Intenta con otros criterios de búsqueda o ajusta los filtros.
-          </p>
-        </div>
-      ) : noResults ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No hay productos disponibles.</p>
+          <p className="text-gray-600 mb-4">Intenta con otros criterios o ajusta los filtros.</p>
+          {hasActiveFilters && (
+            <button 
+              onClick={() => setFilters({})}
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+            >
+              Limpiar todos los filtros
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map((prod) => (
-            <ProductCard
-              key={prod.id}
-              id={prod.id}
-              title={prod.title}
-              description={prod.description}
-              imageUrl={prod.thumbnail}
-              price={
-                prod.variants?.[0]?.prices?.[0]
-                  ? `$${(prod.variants[0].prices[0].amount / 100).toFixed(2)}`
-                  : undefined
+          {products.map((prod: any) => {
+            const getPrice = (product: any) => {
+              const variant = product.variants?.[0] || {};
+              
+              // Intentar diferentes formas de obtener el precio
+              if (variant.prices?.length > 0) {
+                const price = variant.prices[0];
+                return `$${(price.amount / 100).toFixed(2)}`;
               }
-              footerText="Entrega rápida 🚚"
-              label="Nuevo"
-            />
-          ))}
+              if (variant.calculated_price) {
+                return `$${(variant.calculated_price / 100).toFixed(2)}`;
+              }
+              if (variant.original_price) {
+                return `$${(variant.original_price / 100).toFixed(2)}`;
+              }
+              if (product.variants?.[0]?.prices?.[0]?.amount) {
+                return `$${(product.variants[0].prices[0].amount / 100).toFixed(2)}`;
+              }
+              
+              return "—";
+            };
+
+            const productPrice = getPrice(prod);
+
+            return (
+              <ProductCard
+                key={prod.id}
+                id={prod.id}
+                title={prod.title}
+                description={prod.description}
+                imageUrl={prod.thumbnail}
+                price={productPrice}
+                footerText="Entrega rápida 🚚"
+                label="Nuevo"
+              />
+            );
+          })}
         </div>
       )}
     </div>

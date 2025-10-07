@@ -4,6 +4,8 @@ import React, { memo, useCallback } from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import Image from "next/image";
+import { useCart } from "@/context/CartContext";
+
 
 export type CardProps = {
   id: string;
@@ -84,13 +86,23 @@ const ProductImage = memo(({
 
 ProductImage.displayName = 'ProductImage';
 
-// 🔹 Componente de precio memoizado
+// 🔹 Componente de precio memoizado - VERSIÓN MEJORADA
 const PriceDisplay = memo(({ price, originalPrice }: { price?: string; originalPrice?: number }) => {
-  if (!price) return null;
+
+  
+  if (!price) {
+    return (
+      <div className="mb-3">
+        <span className="text-gray-500 text-sm">Precio no disponible</span>
+      </div>
+    );
+  }
   
   return (
     <div className="flex items-center space-x-2 mb-3">
-      <span className="card-price">{price}</span>
+      <span className="card-price font-semibold text-lg text-gray-900">
+        {price}
+      </span>
       {originalPrice && originalPrice > parseFloat(price.replace(/[^0-9.]/g, '')) && (
         <span className="text-sm text-gray-500 line-through">
           ${originalPrice.toFixed(2)}
@@ -118,12 +130,27 @@ export const ProductCard: React.FC<CardProps> = memo(({
   priority = false
 }) => {
 
+  const { addToCart } = useCart();
+
+
   // 🔹 Handler memoizado para evitar re-renders
-  const handleAddToCart = useCallback((e: React.MouseEvent) => {
+    const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Lógica de carrito local
+    addToCart({
+      id,
+      title,
+      price: parseFloat(price?.replace(/[^0-9.]/g, "") || "0"),
+      image: imageUrl || "",
+      quantity: 1
+    });
+
+    // Si deseas conservar el callback externo, puedes dejarlo también
     onAddToCart?.();
-  }, [onAddToCart]);
+  }, [addToCart, id, title, price, imageUrl, onAddToCart]);
+
 
   // 🔹 Truncar descripción muy larga
   const truncatedDescription = description.length > 100 
@@ -168,7 +195,7 @@ export const ProductCard: React.FC<CardProps> = memo(({
             className="button button--primary w-full transition-colors duration-200 hover:bg-blue-600 active:bg-blue-700"
             aria-label={`Agregar ${title} al carrito`}
           >
-            Comprar
+            Añadir al carrito
           </button>
         </div>
 

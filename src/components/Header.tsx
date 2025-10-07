@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from './Button'
+import { useCart } from "@/context/CartContext";
 import '../styles/globals.css'
+import { ShoppingCart } from "lucide-react";
 
 type User = {
   name: string
@@ -17,6 +19,7 @@ export interface HeaderProps {
 
 export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { cart } = useCart();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -25,6 +28,8 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
   const closeMenu = () => {
     setIsMenuOpen(false);
   };
+
+  const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
     <header className="header">
@@ -56,7 +61,18 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
           <Link href="/" onClick={closeMenu}>
             <h1>E-tianguis</h1>
           </Link>
-        </div>
+        </div>  
+
+        <Link href="/cart" className="relative">
+            <ShoppingCart size={24} className="text-gray-700 hover:text-gray-900" />
+            {itemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {itemCount}
+              </span>
+            )}
+          </Link>
+
+
 
         {/* Botón menú hamburguesa - Solo en móvil */}
         <button 
@@ -78,6 +94,8 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
             </Link>
             {/* Puedes agregar más categorías aquí */}
           </div>
+
+
 
           {/* Sección de usuario */}
           <div className="header__user-section">
