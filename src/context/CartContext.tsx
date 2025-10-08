@@ -16,7 +16,10 @@ interface CartContextType {
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
+  subtotal: number;
+  tax: number;
   total: number;
+  shipping: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -24,44 +27,50 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // 🔄 1. Cargar carrito desde localStorage (persistencia local)
+  // 🔄 Cargar carrito desde localStorage
   useEffect(() => {
     const stored = localStorage.getItem("cart");
     if (stored) setCart(JSON.parse(stored));
   }, []);
 
-  // 💾 2. Guardar carrito cuando cambia
+  // 💾 Guardar carrito cuando cambia
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product: Omit<CartItem, "quantity">) => {
+  // 🧮 Cálculos
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const IVA_RATE = 0.16;
+  const tax = subtotal * IVA_RATE;
+  const shipping = subtotal > 1000 ? 0 : 40;
+  const total = subtotal + tax + shipping;
+
+  // 🛒 Funciones del carrito
+  const addToCart = (product: CartItem) => {
     setCart((prev) => {
-        const existing = prev.find((item) => item.id === product.id);
-        if (existing) {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
         return prev.map((item) =>
-            item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + product.quantity }
             : item
         );
-        }
-        return [...prev, { ...product, quantity: 1 }];
+      }
+      return [...prev, { ...product }];
     });
-    };
+  };
 
-
-  const removeFromCart = (id: string) => setCart(prev => prev.filter(p => p.id !== id));
+  const removeFromCart = (id: string) =>
+    setCart((prev) => prev.filter((p) => p.id !== id));
 
   const updateQuantity = (id: string, quantity: number) =>
-    setCart(prev => prev.map(p => (p.id === id ? { ...p, quantity } : p)));
+    setCart((prev) => prev.map((p) => (p.id === id ? { ...p, quantity } : p)));
 
   const clearCart = () => setCart([]);
 
-  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, total }}
+      value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, tax, total, shipping }}
     >
       {children}
     </CartContext.Provider>

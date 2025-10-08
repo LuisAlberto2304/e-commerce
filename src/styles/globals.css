@@ -556,30 +556,6 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none;
 }
 
-/* Botón menú hamburguesa (oculto en desktop) */
-.header__menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  z-index: 1001;
-}
-
-.header__menu-toggle span {
-  display: block;
-  height: 3px;
-  width: 100%;
-  background: white;
-  margin: 3px 0;
-  transition: 0.3s;
-  border-radius: 2px;
-}
-
 /* Navegación desktop */
 .header__nav {
   display: flex;
@@ -621,6 +597,120 @@ h1, h2, h3, h4, h5, h6 {
 .header__buttons {
   display: flex;
   gap: 10px;
+}
+
+/* Carrito mejor integrado */
+.header__cart {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-left: 10px;
+}
+
+.header__cart-mobile {
+  display: none;
+  position: relative;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header__cart-icon {
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.header__cart:hover,
+.header__cart-mobile:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.header__cart:hover .header__cart-icon,
+.header__cart-mobile:hover .header__cart-icon {
+  color: white;
+}
+
+.header__cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-primary-700);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Botones con iconos */
+.btn-icon-login,
+.btn-icon-register {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-icon-login:hover,
+.btn-icon-register:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-icon {
+  width: 1rem;
+  height: 1rem;
+  color: white;
+}
+
+/* Botón menú hamburguesa (oculto en desktop) */
+.header__menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+}
+
+.header__menu-toggle span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background: white;
+  margin: 3px 0;
+  transition: 0.3s;
+  border-radius: 2px;
 }
 
 /* ===== MÓVIL ===== */
@@ -704,6 +794,17 @@ h1, h2, h3, h4, h5, h6 {
     gap: 8px;
   }
   
+  /* Carrito en móvil - ocultar el del nav y mostrar el móvil */
+  .header__cart {
+    display: none;
+  }
+  
+  .header__cart-mobile {
+    display: flex;
+    order: -1; /* Lo coloca antes del menú hamburguesa */
+    margin-right: 10px;
+  }
+  
   /* Ajustes de botones en móvil */
   .header__buttons .button {
     width: 100%;
@@ -739,85 +840,18 @@ h1, h2, h3, h4, h5, h6 {
   .header__nav {
     padding: 0 15px 15px;
   }
-}
-
-/* Botones con iconos */
-.btn-icon-login,
-.btn-icon-register {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 25px;
-  font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-icon-login {
-  background:  #05085F;
-  color: white;
-}
-
-.btn-icon-register {
-  background: #055F05;
-  color: white;
-}
-
-.btn-icon {
-  width: 18px;
-  height: 18px;
-  transition: transform 0.3s ease;
-}
-
-.btn-icon-login:hover .btn-icon {
-  transform: translateX(2px);
-}
-
-.btn-icon-register:hover .btn-icon {
-  transform: scale(1.1);
-}
-
-.btn-icon-login:hover,
-.btn-icon-register:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
-
-.btn-icon-login:active,
-.btn-icon-register:active {
-  transform: translateY(0);
-}
-
-
-/* Ajustes para móvil */
-@media (max-width: 768px) {
-  .header__buttons {
-    flex-direction: column;
-    width: 100%;
-    gap: 10px;
+  
+  .header__cart-mobile {
+    padding: 6px;
+    margin-right: 8px;
   }
   
-  .btn-login,
-  .btn-register,
-  .btn-border-anim,
-  .btn-fill-anim,
-  .btn-icon-login,
-  .btn-icon-register,
-  .btn-glass,
-  .btn-neon {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  /* Reducir efectos en móvil para mejor rendimiento */
-  .btn-register .btn-shine {
-    animation: none;
+  .header__cart-badge {
+    width: 16px;
+    height: 16px;
+    font-size: 0.65rem;
+    top: -5px;
+    right: -5px;
   }
 }
 

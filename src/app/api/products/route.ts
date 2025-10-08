@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/products/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-// En tu app/api/products/route.ts - DEBUG COMPLETO DE FILTROS
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
+
+    // 🔹 Soportar tanto categoryId (único) como categoryIds (múltiples)
     const categoryId = url.searchParams.get("categoryId") || url.searchParams.get("category_id") || undefined;
+    const categoryIdsParam = url.searchParams.get("categoryIds") || undefined;
+    const categoryIds = categoryIdsParam ? categoryIdsParam.split(",") : [];
+
     const q = url.searchParams.get("q") || undefined;
     const color = url.searchParams.get("color") || undefined;
     const size = url.searchParams.get("size") || undefined;
@@ -15,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     console.log("🎯 FILTROS RECIBIDOS EN BACKEND:", {
       categoryId,
+      categoryIds,
       q,
       color,
       size,
@@ -24,17 +28,10 @@ export async function GET(req: NextRequest) {
       tieneSize: !!size
     });
 
-    // Construir parámetros para Medusa
+    // 🔹 Construir parámetros para Medusa (solo 1 categoría, por compatibilidad)
     const medusaParams = new URLSearchParams();
-    
-    if (categoryId) {
-      medusaParams.append("category_id", categoryId);
-    }
-    
-    if (q) {
-      medusaParams.append("q", q);
-    }
-    
+    if (categoryId) medusaParams.append("category_id", categoryId);
+    if (q) medusaParams.append("q", q);
     medusaParams.append("limit", limit);
     medusaParams.append("offset", offset);
     medusaParams.append("expand", "options,variants,variants.options,variants.prices");
@@ -60,193 +57,117 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json();
     let products = data.products || [];
-    
+
     console.log("🔍 DEBUG ESTRUCTURA MEDUSA:", {
       totalProducts: products.length,
-      firstProduct: products[0] ? {
-        id: products[0].id,
-        title: products[0].title,
-        category: products[0].category, // Ver si existe
-        categories: products[0].categories, // O esta
-        category_id: products[0].category_id // O esta
-      } : 'No products'
+      firstProduct: products[0]
+        ? {
+            id: products[0].id,
+            title: products[0].title,
+            category: products[0].category,
+            categories: products[0].categories,
+            category_id: products[0].category_id,
+          }
+        : "No products",
     });
 
-    // Verifica si los productos tienen la categoría filtrada
-    if (categoryId && products.length > 0) {
-      console.log("🎯 VERIFICANDO CATEGORÍAS EN PRODUCTOS:");
-      products.forEach((product: any, index: number) => {
-        console.log(`   Producto ${index}: ${product.title}`);
-        console.log(`   - category: ${product.category}`);
-        console.log(`   - category_id: ${product.category_id}`);
-        console.log(`   - categories: ${JSON.stringify(product.categories)}`);
-      });
-    }
+    // 🔹 Filtrado local por categorías múltiples
+    if (categoryIds.length > 0) {
+      const before = products.length;
+      console.log(`🎯 APLICANDO FILTRO POR MÚLTIPLES CATEGORÍAS: ${categoryIds.join(", ")}`);
 
-    // 🔥 DEBUG COMPLETO DE FILTRADO LOCAL
-    console.log("🎯 INICIANDO FILTRADO LOCAL:", {
-      productosAntesFiltros: products.length,
-      filtroColor: color,
-      filtroSize: size,
-      aplicarFiltroColor: !!color && color.trim() !== '',
-      aplicarFiltroSize: !!size && size.trim() !== ''
-    });
-
-    if (categoryId) {
-      const beforeCount = products.length;
-      console.log(`🎯 APLICANDO FILTRO MANUAL POR CATEGORÍA: ${categoryId}`);
-      
       products = products.filter((product: any) => {
-        const matches = 
+        const productCats = [
+          product.category_id,
+          product.category?.id,
+          ...(product.categories?.map((c: any) => c.id) || []),
+        ].filter(Boolean);
+
+        // Verifica si alguna categoría del producto coincide con las seleccionadas
+        return productCats.some((id: string) => categoryIds.includes(id));
+      });
+
+      console.log(`🎯 RESULTADO FILTRO MULTICATEGORÍA: ${before} → ${products.length}`);
+    }
+    // 🔹 Filtrado local si solo hay una categoría individual
+    else if (categoryId) {
+      const before = products.length;
+      console.log(`🎯 APLICANDO FILTRO MANUAL POR CATEGORÍA: ${categoryId}`);
+
+      products = products.filter((product: any) => {
+        const matches =
           product.category_id === categoryId ||
           product.category?.id === categoryId ||
           (product.categories && product.categories.some((cat: any) => cat.id === categoryId));
-        
+
         return matches;
       });
-      
-      console.log(`🎯 RESULTADO FILTRO CATEGORÍA: ${beforeCount} → ${products.length} productos`);
+
+      console.log(`🎯 RESULTADO FILTRO CATEGORÍA: ${before} → ${products.length}`);
     }
 
-    // Filtrar localmente por búsqueda exacta si hay "q"
-  if (q && q.trim() !== "") {
-    const searchTerm = q.toLowerCase().trim();
-    const beforeCount = products.length;
+    // 🔍 Filtro local por q (búsqueda)
+    if (q && q.trim() !== "") {
+      const searchTerm = q.toLowerCase().trim();
+      const beforeCount = products.length;
 
-    console.log(`🔍 APLICANDO FILTRO LOCAL POR TÍTULO QUE EMPIEZA CON: "${searchTerm}"`);
+      console.log(`🔍 APLICANDO FILTRO LOCAL POR TÍTULO QUE EMPIEZA CON: "${searchTerm}"`);
+      products = products.filter((product: any) => product.title?.toLowerCase().startsWith(searchTerm));
+      console.log(`🔍 RESULTADO FILTRO Q: ${beforeCount} → ${products.length}`);
+    }
 
-    products = products.filter((product: any) =>
-      product.title?.toLowerCase().startsWith(searchTerm)
-    );
-
-    console.log(`🔍 RESULTADO FILTRO Q: ${beforeCount} → ${products.length} productos`);
-  }
-
-
-    // Filtrar localmente por color - CON DEBUG DETALLADO
-    if (color && color.trim() !== '') {
+    // 🎨 Filtrado color y 📏 talla (sin cambios)
+    if (color && color.trim() !== "") {
       const colorTerm = color.toLowerCase().trim();
       const beforeCount = products.length;
-      
-      console.log(`🎨 APLICANDO FILTRO COLOR: "${colorTerm}"`);
-      
+
       products = products.filter((product: any) => {
         let match = false;
-        
-        // 1. Buscar en options
-        if (product.options && product.options.length > 0) {
-          console.log(`   🔍 Producto "${product.title}" - Options:`, product.options);
-          
-          match = product.options.some((option: any) => {
-            const isColorOption = option.title?.toLowerCase().includes('color');
-            console.log(`   🎯 Opción "${option.title}": esColor? ${isColorOption}`);
-            
-            if (isColorOption && option.values) {
-              return option.values.some((value: any) => {
-                const valueMatch = value.value?.toLowerCase().includes(colorTerm);
-                console.log(`      📌 Valor "${value.value}": match? ${valueMatch}`);
-                return valueMatch;
-              });
-            }
-            return false;
-          });
+        if (product.options) {
+          match = product.options.some((option: any) =>
+            option.values?.some((v: any) => v.value?.toLowerCase().includes(colorTerm))
+          );
         }
-
-        // 2. Buscar en variants si no hay match
-        if (!match && product.variants && product.variants.length > 0) {
-          console.log(`   🔍 Producto "${product.title}" - Buscando en variants`);
-          
-          match = product.variants.some((variant: any, index: number) => {
-            if (variant.options && variant.options.length > 0) {
-              return variant.options.some((option: any) => {
-                const valueMatch = option.value?.toLowerCase().includes(colorTerm);
-                if (valueMatch) {
-                  console.log(`      ✅ Match en variant ${index}: "${option.value}"`);
-                }
-                return valueMatch;
-              });
-            }
-            return false;
-          });
+        if (!match && product.variants) {
+          match = product.variants.some((variant: any) =>
+            variant.options?.some((opt: any) => opt.value?.toLowerCase().includes(colorTerm))
+          );
         }
-
-        // 3. Buscar en metadata
-        if (!match && product.metadata) {
-          const metadataColor = product.metadata.color;
-          if (metadataColor) {
-            match = metadataColor.toLowerCase().includes(colorTerm);
-            console.log(`   🔍 Metadata color "${metadataColor}": match? ${match}`);
-          }
+        if (!match && product.metadata?.color) {
+          match = product.metadata.color.toLowerCase().includes(colorTerm);
         }
-
-        console.log(`   🎯 Producto "${product.title}": ${match ? '✅ INCLUIDO' : '❌ EXCLUIDO'}`);
         return match;
       });
-      
-      console.log(`🎨 RESULTADO FILTRO COLOR: ${beforeCount} → ${products.length} productos`);
+
+      console.log(`🎨 RESULTADO FILTRO COLOR: ${beforeCount} → ${products.length}`);
     }
 
-    // Filtrar localmente por talla - CON DEBUG DETALLADO
-    if (size && size.trim() !== '') {
+    if (size && size.trim() !== "") {
       const sizeTerm = size.toLowerCase().trim();
       const beforeCount = products.length;
-      
-      console.log(`📏 APLICANDO FILTRO TALLA: "${sizeTerm}"`);
-      
+
       products = products.filter((product: any) => {
         let match = false;
-        
-        // 1. Buscar en options
-        if (product.options && product.options.length > 0) {
-          match = product.options.some((option: any) => {
-            const isSizeOption = option.title?.toLowerCase().includes('size');
-            if (isSizeOption && option.values) {
-              return option.values.some((value: any) => {
-                const valueMatch = value.value?.toLowerCase().includes(sizeTerm);
-                if (valueMatch) {
-                  console.log(`      ✅ Match size en option: "${value.value}"`);
-                }
-                return valueMatch;
-              });
-            }
-            return false;
-          });
+        if (product.options) {
+          match = product.options.some((option: any) =>
+            option.values?.some((v: any) => v.value?.toLowerCase().includes(sizeTerm))
+          );
         }
-
-        // 2. Buscar en variants si no hay match
-        if (!match && product.variants && product.variants.length > 0) {
-          match = product.variants.some((variant: any) => {
-            if (variant.options && variant.options.length > 0) {
-              return variant.options.some((option: any) => {
-                const valueMatch = option.value?.toLowerCase().includes(sizeTerm);
-                if (valueMatch) {
-                  console.log(`      ✅ Match size en variant: "${option.value}"`);
-                }
-                return valueMatch;
-              });
-            }
-            return false;
-          });
+        if (!match && product.variants) {
+          match = product.variants.some((variant: any) =>
+            variant.options?.some((opt: any) => opt.value?.toLowerCase().includes(sizeTerm))
+          );
         }
-
-        // 3. Buscar en metadata
-        if (!match && product.metadata) {
-          const metadataSize = product.metadata.size;
-          if (metadataSize) {
-            match = metadataSize.toLowerCase().includes(sizeTerm);
-            console.log(`   🔍 Metadata size "${metadataSize}": match? ${match}`);
-          }
+        if (!match && product.metadata?.size) {
+          match = product.metadata.size.toLowerCase().includes(sizeTerm);
         }
-
-        console.log(`   🎯 Producto "${product.title}": ${match ? '✅ INCLUIDO' : '❌ EXCLUIDO'}`);
         return match;
       });
-      
-      console.log(`📏 RESULTADO FILTRO TALLA: ${beforeCount} → ${products.length} productos`);
+
+      console.log(`📏 RESULTADO FILTRO SIZE: ${beforeCount} → ${products.length}`);
     }
 
     console.log("✅ PRODUCTOS FINALES:", products.length);
-
     return NextResponse.json({
       products,
       count: products.length,

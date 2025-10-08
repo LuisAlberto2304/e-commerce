@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 
-type Filters = { q?: string; color?: string; size?: string; category?: string };
+type Filters = { q?: string; color?: string; size?: string; categories?: string[] };
+
 
 type FiltersSidebarProps = {
   categories: { id: string; name: string }[];
@@ -18,27 +20,33 @@ export default function FiltersSidebar({
   const safeCategories = Array.isArray(categories) ? categories : [];
 
   const handleFilterChange = (
-    key: keyof Omit<Filters, "category">,
+    key: keyof Omit<Filters, "categories">,
     value: string
   ) => {
     setFilters((prev) => {
       const next = { ...prev };
       const trimmed = value.trim();
       if (!trimmed) delete next[key];
-      else next[key] = trimmed;
+      else next[key] = trimmed as any;
       return next;
     });
   };
 
-  const handleCategoryChange = (categoryId: string | null) => {
+
+  const handleCategoryChange = (categoryId: string) => {
     setFilters((prev) => {
-      if (categoryId === null) {
-        const { category, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, category: categoryId };
+      const current = prev.categories ?? [];
+      const alreadySelected = current.includes(categoryId);
+
+      // Si ya está seleccionada, la quitamos
+      const updated = alreadySelected
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId];
+
+      return { ...prev, categories: updated.length > 0 ? updated : undefined };
     });
   };
+
 
   const clearAllFilters = () => setFilters({});
   const hasActiveFilters = Object.keys(filters).length > 0;
@@ -65,49 +73,47 @@ export default function FiltersSidebar({
       </div>
 
       {/* Categorías */}
-      <div>
-        <SectionTitle>Categorías</SectionTitle>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          <label
-            className={`block cursor-pointer px-3 py-2 rounded border transition ${
-              !filters.category
-                ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
-                : "border-gray-300 hover:bg-gray-100 text-gray-700"
-            }`}
-          >
-            <input
-              type="radio"
-              name="category"
-              value=""
-              checked={!filters.category}
-              onChange={() => handleCategoryChange(null)}
-              className="hidden"
-            />
-            Todas las categorías
-          </label>
-
-          {safeCategories.map((cat) => (
+        <div>
+          <SectionTitle>Categorías</SectionTitle>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
             <label
-              key={cat.id}
               className={`block cursor-pointer px-3 py-2 rounded border transition ${
-                filters.category === cat.id
+                !filters.categories || filters.categories.length === 0
                   ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
                   : "border-gray-300 hover:bg-gray-100 text-gray-700"
               }`}
             >
               <input
-                type="radio"
-                name="category"
-                value={cat.id}
-                checked={filters.category === cat.id}
-                onChange={() => handleCategoryChange(cat.id)}
+                type="checkbox"
+                checked={!filters.categories || filters.categories.length === 0}
+                onChange={() => setFilters((prev) => ({ ...prev, categories: undefined }))}
                 className="hidden"
               />
-              {cat.name}
+              Todas las categorías
             </label>
-          ))}
+
+            {safeCategories.map((cat) => (
+              <label
+                key={cat.id}
+                className={`block cursor-pointer px-3 py-2 rounded border transition ${
+                  filters.categories?.includes(cat.id)
+                    ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                    : "border-gray-300 hover:bg-gray-100 text-gray-700"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  value={cat.id}
+                  checked={filters.categories?.includes(cat.id) ?? false}
+                  onChange={() => handleCategoryChange(cat.id)}
+                  className="hidden"
+                />
+                {cat.name}
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+
 
 
 

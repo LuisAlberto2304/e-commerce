@@ -8,7 +8,9 @@ const nextConfig: NextConfig = {
       "png.pngtree.com",
       "www.oxiclean.com",
       "www.lakeland.com",
-      "caissoned-uncorrelative-dedra.ngrok-free.dev"
+      "caissoned-uncorrelative-dedra.ngrok-free.dev",
+      "images.unsplash.com",
+      "picsum.photos"
     ],
     remotePatterns: [
       {

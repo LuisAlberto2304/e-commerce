@@ -33,7 +33,6 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
 
   return (
     <header className="header">
-      {/* Contenedor principal */}
       <div className="header__content">
         {/* Logo y marca */}
         <div className="header__brand">
@@ -63,28 +62,6 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
           </Link>
         </div>  
 
-        <Link href="/cart" className="relative">
-            <ShoppingCart size={24} className="text-gray-700 hover:text-gray-900" />
-            {itemCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {itemCount}
-              </span>
-            )}
-          </Link>
-
-
-
-        {/* Botón menú hamburguesa - Solo en móvil */}
-        <button 
-          className={`header__menu-toggle ${isMenuOpen ? 'header__menu-toggle--open' : ''}`}
-          onClick={toggleMenu}
-          aria-label="Menú principal"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-
         {/* Navegación */}
         <nav className={`header__nav ${isMenuOpen ? 'header__nav--open' : ''}`}>
           {/* Menú de categorías */}
@@ -92,10 +69,7 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
             <Link href="/category" onClick={closeMenu} className="header__category-link">
               Todos los productos
             </Link>
-            {/* Puedes agregar más categorías aquí */}
           </div>
-
-
 
           {/* Sección de usuario */}
           <div className="header__user-section">
@@ -116,8 +90,6 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
                 </div>
               </>
             ) : (
-              // Botones estilo glassmorphism
-              // Botones con iconos SVG
               <div className="header__buttons">
                 <Link href="/login" onClick={closeMenu}>
                   <button className="btn-icon-login">
@@ -142,7 +114,38 @@ export const Header = ({ user, onLogin, onLogout, onCreateAccount }: HeaderProps
               </div>
             )}
           </div>
+
+          {/* Carrito en el nav - mejor integrado */}
+          <Link href="/cart" className="header__cart" onClick={closeMenu}>
+            <ShoppingCart size={24} className="header__cart-icon" />
+            {itemCount > 0 && (
+              <span className="header__cart-badge">
+                {itemCount}
+              </span>
+            )}
+          </Link>
         </nav>
+
+        {/* Carrito para móvil - fuera del nav */}
+        <Link href="/cart" className="header__cart-mobile">
+          <ShoppingCart size={24} className="header__cart-icon" />
+          {itemCount > 0 && (
+            <span className="header__cart-badge">
+              {itemCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Botón menú hamburguesa - Solo en móvil */}
+        <button 
+          className={`header__menu-toggle ${isMenuOpen ? 'header__menu-toggle--open' : ''}`}
+          onClick={toggleMenu}
+          aria-label="Menú principal"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
     </header>
   );

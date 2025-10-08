@@ -4,7 +4,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { fetchProducts } from "@/app/lib/medusaClient";
 import { ProductCard } from "./ProductCard";
 
-type Filters = { q?: string; color?: string; size?: string; category?: string };
+type Filters = {
+  q?: string;
+  color?: string;
+  size?: string;
+  categories?: string[];
+};
+
 
 type ProductGridWithFiltersProps = {
   filters: Filters;
@@ -21,12 +27,13 @@ export default function ProductGridWithFilters({ filters, setFilters }: ProductG
       q: filters.q?.trim() || undefined,
       color: filters.color?.trim() || undefined,
       size: filters.size?.trim() || undefined,
-      category: filters.category?.trim() || undefined,
+      categories: filters.categories?.length ? filters.categories : undefined,
     };
-    
+
     console.log("🔄 Filtros normalizados:", normalizedFilters);
     return normalizedFilters;
-  }, [filters.q, filters.color, filters.size, filters.category]);
+  }, [filters.q, filters.color, filters.size, filters.categories]);
+
 
   useEffect(() => {
   let mounted = true;
@@ -37,7 +44,7 @@ export default function ProductGridWithFilters({ filters, setFilters }: ProductG
     
     try {
       console.log("🔄 Enviando filtros a la API:", {
-        categoryId: normalized.category,
+        categoryId: normalized.categories,
         q: normalized.q,
         color: normalized.color,
         size: normalized.size,
@@ -45,20 +52,21 @@ export default function ProductGridWithFilters({ filters, setFilters }: ProductG
       });
 
       const data = await fetchProducts({
-        categoryId: normalized.category,
+        categoryIds: normalized.categories,
         q: normalized.q,
         color: normalized.color,
         size: normalized.size,
         limit: 100,
       });
 
+
       if (!mounted) return;
       
       console.log("✅ Respuesta de la API:", {
         totalProducts: data.products?.length || 0,
         filtersApplied: normalized,
-        products: data.products // Ver estructura real
       });
+
       
       setProducts(data.products || []);
       if (data.products && data.products.length > 0) {
@@ -146,17 +154,26 @@ export default function ProductGridWithFilters({ filters, setFilters }: ProductG
           <div className="mt-2 text-xs text-gray-500">
             <strong>Filtros activos:</strong>
             <div className="flex flex-wrap gap-2 mt-1">
-              {normalized.category && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
-                  Categoría: {normalized.category}
-                  <button 
-                    onClick={() => clearFilter('category')}
+              {normalized.categories?.map((catId) => (
+                <span
+                  key={catId}
+                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1"
+                >
+                  Categoría: {catId}
+                  <button
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        categories: prev.categories?.filter((id) => id !== catId),
+                      }))
+                    }
                     className="text-blue-600 hover:text-blue-800 font-bold"
                   >
                     ×
                   </button>
                 </span>
-              )}
+              ))}
+
               {normalized.q && (
                 <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
                   Búsqueda: {normalized.q}

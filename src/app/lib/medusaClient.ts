@@ -80,7 +80,8 @@ function matchesSize(product: any, sizeTerm: string) {
 }
 
 export async function fetchProducts(filters: {
-  categoryId?: string;
+  categoryId?: string;      // ← sigue permitiendo una sola categoría
+  categoryIds?: string[];   // ← permite varias categorías
   q?: string;
   color?: string;
   size?: string;
@@ -90,8 +91,15 @@ export async function fetchProducts(filters: {
   const baseUrl = getBaseUrl();
   const params = new URLSearchParams();
 
-  // solo mandamos lo que Medusa entiende (categoryId / q / limit / offset)
-  if (filters.categoryId) params.append("categoryId", filters.categoryId);
+  // 🔹 Si hay varias categorías, las unimos en una sola cadena separada por comas
+  if (filters.categoryIds?.length) {
+    params.append("categoryIds", filters.categoryIds.join(",")); // Ejemplo: cat_a,cat_b,cat_c
+  } 
+  // 🔹 Si solo hay una categoría individual
+  else if (filters.categoryId) {
+    params.append("categoryId", filters.categoryId);
+  }
+
   if (filters.q?.trim()) params.append("q", filters.q.trim());
   params.append("limit", String(filters.limit ?? 100));
   params.append("offset", String(filters.offset ?? 0));
@@ -118,7 +126,7 @@ export async function fetchProducts(filters: {
 
     console.log("🔎 fetchProducts - productos recibidos:", products.length, { colorTerm, sizeTerm });
 
-    // Filtrado local (si el usuario pidió color/size)
+    // Filtrado local (color/size)
     if (colorTerm) {
       const before = products.length;
       products = products.filter((p) => matchesColor(p, colorTerm));
@@ -132,14 +140,13 @@ export async function fetchProducts(filters: {
     }
 
     console.log("✅ fetchProducts - productos finales devueltos:", products.length);
-
-    // devolvemos la misma estructura que antes, pero con products filtrados
     return { ...data, products };
   } catch (err) {
     console.error("🚨 fetchProducts - excepción:", err);
     throw err;
   }
 }
+
 
 export async function fetchProductById(id: string) {
   const baseUrl = getBaseUrl();
