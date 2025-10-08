@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     if (q) medusaParams.append("q", q);
     medusaParams.append("limit", limit);
     medusaParams.append("offset", offset);
-    medusaParams.append("expand", "options,variants,variants.options,variants.prices");
+    medusaParams.append("expand", "categories,category,options,variants,variants.options,variants.prices");
 
     const medusaUrl = `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/products?${medusaParams.toString()}`;
     console.log("📡 Llamando a Medusa:", medusaUrl);
@@ -83,8 +83,23 @@ export async function GET(req: NextRequest) {
           ...(product.categories?.map((c: any) => c.id) || []),
         ].filter(Boolean);
 
+        console.log(
+          "🧩 Revisando producto:",
+          product.title,
+          "→ category_id:",
+          product.category_id,
+          "→ category:",
+          product.category?.id,
+          "→ categories:",
+          product.categories?.map((c: any) => c.id)
+        );
+
+
         // Verifica si alguna categoría del producto coincide con las seleccionadas
-        return productCats.some((id: string) => categoryIds.includes(id));
+        return productCats.some((id: string) =>
+          categoryIds.some(cid => id.toLowerCase() === cid.toLowerCase())
+        );
+
       });
 
       console.log(`🎯 RESULTADO FILTRO MULTICATEGORÍA: ${before} → ${products.length}`);
@@ -95,16 +110,20 @@ export async function GET(req: NextRequest) {
       console.log(`🎯 APLICANDO FILTRO MANUAL POR CATEGORÍA: ${categoryId}`);
 
       products = products.filter((product: any) => {
-        const matches =
-          product.category_id === categoryId ||
-          product.category?.id === categoryId ||
-          (product.categories && product.categories.some((cat: any) => cat.id === categoryId));
+        const categoryIds = [
+          product.category_id,
+          product.category?.id,
+          ...(product.categories?.map((c: any) => c.id) || []),
+        ].filter(Boolean);
+
+        const matches = categoryIds.some((id: string) => id?.toLowerCase() === categoryId.toLowerCase());
 
         return matches;
       });
 
       console.log(`🎯 RESULTADO FILTRO CATEGORÍA: ${before} → ${products.length}`);
     }
+
 
     // 🔍 Filtro local por q (búsqueda)
     if (q && q.trim() !== "") {

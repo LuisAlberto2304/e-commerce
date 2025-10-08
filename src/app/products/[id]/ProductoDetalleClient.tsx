@@ -4,18 +4,21 @@
 
 import { useEffect, useState } from "react";
 import { ShoppingCart, Heart } from "lucide-react";
-import { fetchProductById, fetchCategoryById } from "@/app/lib/medusaClient";
+import { fetchProductById, fetchCategoryById, fetchProducts } from "@/app/lib/medusaClient";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import StockStatus from "@/components/StockStatus";
 import ProductCarousel from "@/components/ProductCarousel";
 import ProductReviews from "@/components/ProductReviews";
 import { mockRecommendedProducts, mockReviews } from "@/app/data/mockData";
 import Image from "next/image";
+import { CardProps } from "@/components/ProductCardCarousel";
+import type { ProductFromAPI } from '@/utils/getRecommendedProducts';
 
 type Props = { 
   id: string;
   initialProduct?: any;
   initialCategory?: any;
+  recommendedProducts?: any[];
 };
 
 // Funciones helper para manejar imágenes
@@ -96,11 +99,13 @@ const getAbsoluteImageUrl = (url: string | undefined | null): string | null => {
   return url;
 };
 
-export default function ProductoDetalleClient({ id, initialProduct, initialCategory }: Props) {
+export default function ProductoDetalleClient({ id, initialProduct, initialCategory, recommendedProducts = [] }: Props) {
   const [producto, setProducto] = useState<any | null>(initialProduct || null);
   const [category, setCategory] = useState<any | null>(initialCategory || null);
   const [loading, setLoading] = useState(!initialProduct);
+  const [recommended, setRecommended] = useState<any[]>(recommendedProducts);
   const [error, setError] = useState<string | null>(null);
+  
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
@@ -120,13 +125,11 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   }, [producto, productImages]);
 
   useEffect(() => {
-    // Si ya tenemos datos iniciales, no hacer fetch
     if (initialProduct) {
       initializeProduct(initialProduct);
       return;
     }
 
-    // Solo hacer fetch si no hay datos iniciales
     if (!id) {
       setLoading(false);
       return;
@@ -145,9 +148,29 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
         initializeProduct(product);
 
         if (product.category_id) {
-          const categoryData = await fetchCategoryById(product.category_id);
-          setCategory(categoryData);
+          // Traer productos de la misma categoría
+          const categoryProductsData = await fetchProducts({ categoryId: product.category_id, limit: 8 });
+
+          // Mapear productos a CardProps
+          const mappedProducts: CardProps[] = categoryProductsData.products
+            .filter((p: any) => p.id !== product.id) // excluir el producto actual
+            .map((p: any) => ({
+              id: p.id,
+              title: p.title || "Producto sin nombre",
+              description: p.description || "",
+              imageUrl: getAbsoluteImageUrl(p.images?.[0]?.url) || "/placeholder-image.jpg",
+              price: p.variants?.[0]?.prices?.[0]?.amount
+                ? `$${(p.variants[0].prices[0].amount / 100).toFixed(2)}`
+                : "$0.00",
+              originalPrice: undefined,
+              label: undefined,
+              rating: 0,
+              reviewCount: 0,
+            }));
+
+          setRecommended(mappedProducts);
         }
+
       } catch (err) {
         console.error('❌ Error al cargar producto:', err);
         setError('Error al cargar el producto');
@@ -247,12 +270,6 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
       handleImageChange(productImages[nextIndex].url);
     }
   };
-
-  const [imgSrc, setImgSrc] = useState(
-    absoluteSelectedImage ||
-    getAbsoluteImageUrl(productImages[0]?.url) ||
-    "/placeholder-image.jpg"
-  );
 
   if (loading) return <div className="max-w-6xl mx-auto p-6 text-center">Cargando producto...</div>;
   if (error) return <div className="max-w-6xl mx-auto p-6 text-center text-red-600">{error}</div>;
@@ -420,9 +437,20 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
         </div>
       </div>
 
-      {/* Recomendados */}
+      {/* Recomendaciones */}
+
+       {/* Productos recomendados */}
       <div className="mt-12">
-        <ProductCarousel products={mockRecommendedProducts} title="También te puede interesar" />
+        {recommended.length > 0 ? (
+          <ProductCarousel
+            products={recommended}
+            title="También te puede interesar"
+          />
+        ) : (
+          <p className="text-gray-500 text-center">
+            Cargando productos recomendados...
+          </p>
+        )}
       </div>
 
       {/* Reseñas */}

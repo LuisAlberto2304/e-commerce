@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/components/ProductCard.tsx
 'use client'
 import React from "react";
@@ -6,12 +7,13 @@ import { Star } from "lucide-react";
 import Image from "next/image";
 
 export type CardProps = {
+  images: any;
   id: string;
   title: string;
   description: string;
   imageUrl?: string;
   footerText?: string;
-  price?: string; 
+  price?: number; 
   originalPrice?: number; 
   onAddToCart?: () => void;
   label?: string;
@@ -20,7 +22,7 @@ export type CardProps = {
   className?: string;
 };
 
-export const ProductCard: React.FC<CardProps> = ({
+export const ProductCardCarousel: React.FC<CardProps> = ({
   id,
   title,
   description,
@@ -113,4 +115,4 @@ export const ProductCard: React.FC<CardProps> = ({
   );
 };
 
-export default ProductCard;
+export default ProductCardCarousel;

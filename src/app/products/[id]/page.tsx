@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import ProductoDetalleClient from "./ProductoDetalleClient";
-import { fetchProductById, fetchCategoryById } from "@/app/lib/medusaClient";
+import { fetchProductById, fetchCategoryById, fetchProducts } from "@/app/lib/medusaClient";
 import { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
@@ -75,11 +75,33 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       );
     }
 
-    // Obtener categoría (opcional)
     let category: any = null;
-    if (product.category_id) {
-      category = await fetchCategoryById(product.category_id);
+    let recommended: any[] = [];
+
+    // ✅ Soporte para productos con array de categorías
+   // ✅ Detectar categoría desde el producto
+    const categoryId = product.category?.id || product.category_id || product.categories?.[0]?.id;
+    const categoryName = product.categories?.[0]?.name || product.category?.name || "Sin categoría";
+
+    if (categoryId) {
+      // ✅ Ya no llamamos a fetchCategoryById porque no existe /categories/[id]
+      category = { id: categoryId, name: categoryName };
+
+      // ✅ Obtener productos recomendados de la misma categoría
+      // Obtener productos recomendados de la misma categoría
+      const rec = await fetchProducts({
+        categoryId,
+        limit: 4,
+      });
+
+      // ✅ Usar rec.products porque rec no es un array
+      recommended = rec.products.filter((p: any) => p.id !== id);
+
+    } else {
+      console.warn("⚠️ Producto sin categoría válida, no se mostrarán recomendaciones");
     }
+
+
 
     const productUrl = `https://e-tianguis.com/producto/${product.id}`;
 
@@ -137,6 +159,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
           id={id}
           initialProduct={product}
           initialCategory={category}
+          recommendedProducts={recommended}
         />
 
         {/* ✅ Inyectar datos estructurados */}

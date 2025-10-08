@@ -101,6 +101,8 @@ export async function fetchProducts(filters: {
   }
 
   if (filters.q?.trim()) params.append("q", filters.q.trim());
+  if (filters.color?.trim()) params.append("color", filters.color.trim());  // ✅ NUEVO
+  if (filters.size?.trim()) params.append("size", filters.size.trim());
   params.append("limit", String(filters.limit ?? 100));
   params.append("offset", String(filters.offset ?? 0));
 
