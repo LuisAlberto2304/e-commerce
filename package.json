@@ -11,6 +11,8 @@
     "postbuild": "next-sitemap"
   },
   "dependencies": {
+    "firebase": "^12.4.0",
+    "firebase-tools": "^14.19.1",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",
