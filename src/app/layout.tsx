@@ -3,6 +3,7 @@ import '../styles/globals.css'
 import { Inter, Roboto } from 'next/font/google'
 import { PerformanceMetrics } from '../components/PerformanceMetrics'
 import LayoutContent from './LayoutContent'
+import Script from 'next/script'
 
 // 🔹 Configuración optimizada de fuentes
 const inter = Inter({
@@ -67,6 +68,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="/api/health"
           as="fetch"
           crossOrigin="anonymous"
+        />
+        <Script
+          src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=MXN`}
+          strategy="afterInteractive"
         />
       </head>
       <body className={`${inter.className} bg-bg text-text min-h-screen flex flex-col antialiased`}>

@@ -59,7 +59,7 @@ export default function CartPage() {
   const grandTotal = subtotal + tax + shipping;
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4">
+    <div className="max-w-5xl mx-auto py-10 px-4" data-testid="cart-item">
       <h1 className="text-2xl font-bold mb-6">Tu carrito</h1>
 
       {cart.length === 0 ? (
@@ -169,10 +169,25 @@ export default function CartPage() {
               <span>Total:</span>
               <span>${grandTotal.toFixed(2)}</span>
             </div>
-
-            <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
-              Proceder al pago
-            </button>
+            <Link
+              href="/checkout"
+              onClick={() => {
+                const checkoutData = {
+                  subtotal,
+                  tax,
+                  taxRate,
+                  shipping,
+                  grandTotal,
+                  country,
+                  cart,
+                };
+                localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
+              }}
+            >
+              <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition cursor-pointer" data-testid="pay-now">
+                Proceder al pago
+              </button>
+            </Link>
           </div>
         </div>
       )}
