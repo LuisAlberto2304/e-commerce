@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 import { useAuth } from "@/context/userContext";
+import { syncMedusaCustomerWithFirebase } from "@/utils/syncMedusaCustomer";
 
 export default function RegisterLoginClient() {
   const [email, setEmail] = useState("");
@@ -21,7 +22,6 @@ export default function RegisterLoginClient() {
   const { signInWithGoogle } = useAuth();
   const router = useRouter();
 
-  // Función corregida con tipo explícito
   function handleCredentials(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
     
@@ -50,13 +50,25 @@ export default function RegisterLoginClient() {
     setLoading(true);
 
     try {
-      // Registrar usuario en Firebase Auth
+      // 1. Registrar usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      console.log("Usuario registrado en Firebase:", userCredential.user.email);
 
+      // 2. Esperar un momento para que Firebase actualice completamente el estado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 3. Sincronizar con Medusa
+      try {
+        await syncMedusaCustomerWithFirebase();
+        console.log("Usuario registrado en Medusa exitosamente");
+      } catch (syncError: any) {
+        console.error("Error al sincronizar con Medusa:", syncError);
+        // No bloqueamos el registro si falla la sincronización con Medusa
+        // El usuario puede continuar usando la app
+      }
+
+      // 4. Redirigir al home
       router.push("/");
-      
-      alert("¡Registro exitoso!");
       
     } catch (error: any) {
       console.error("Error en registro:", error);
@@ -72,6 +84,9 @@ export default function RegisterLoginClient() {
         case "auth/weak-password":
           setError("La contraseña es demasiado débil");
           break;
+        case "auth/operation-not-allowed":
+          setError("El registro con email/password no está habilitado");
+          break;
         default:
           setError("Error al registrar usuario. Intenta nuevamente.");
       }
@@ -80,14 +95,41 @@ export default function RegisterLoginClient() {
     }
   };
 
-    const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
+      setError("");
+      
+      // 1. Autenticar con Google
       await signInWithGoogle();
-      // El usuario será redirigido automáticamente por el onAuthStateChanged
+      
+      // 2. Esperar a que Firebase actualice el estado
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 3. Sincronizar con Medusa
+      try {
+        await syncMedusaCustomerWithFirebase();
+        console.log("Usuario de Google registrado en Medusa");
+      } catch (syncError: any) {
+        console.error("Error al sincronizar Google con Medusa:", syncError);
+        // No bloqueamos el registro
+      }
+      
+      // 4. Redirigir
+      router.push("/");
+      
     } catch (error: any) {
       console.error("Error con Google Sign-In:", error);
-      setError("Error al iniciar sesión con Google");
+      
+      if (error.message?.includes('no está habilitado')) {
+        setError("El inicio de sesión con Google no está configurado correctamente.");
+      } else if (error.message?.includes('popup fue bloqueado')) {
+        setError("El popup de Google fue bloqueado. Permite popups para este sitio.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setError("Cerraste la ventana de Google antes de completar el registro.");
+      } else {
+        setError("Error al registrarse con Google");
+      }
     } finally {
       setLoading(false);
     }
@@ -95,16 +137,13 @@ export default function RegisterLoginClient() {
 
   return (
     <div className="p-50 flex flex-col items-center justify-center bg-white min-h-screen">
-      {/* 🔹 Título principal */}
       <div className="text-5xl space-x-3.5 p-5 font-bold hover:text-gray-600">
         <Link href="/">
           <h1>E-tianguis</h1>
         </Link>
       </div>
 
-      {/* 🔹 Caja del formulario */}
       <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-8 sm:p-10">
-        {/* 🔹 Volver al inicio */}
         <div className="mb-6">
           <Link href="/">
             <p className="text-blue-500 hover:text-blue-700 cursor-pointer text-sm">
@@ -113,19 +152,16 @@ export default function RegisterLoginClient() {
           </Link>
         </div>
 
-        {/* 🔹 Título del formulario */}
         <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
           Regístrate
         </h1>
 
-        {/* 🔹 Mostrar error */}
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
           </div>
         )}
 
-        {/* 🔹 Formulario */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
@@ -245,8 +281,6 @@ export default function RegisterLoginClient() {
           </div>
         </form>
 
-
-        {/* 🔹 Separador */}
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -257,7 +291,6 @@ export default function RegisterLoginClient() {
             </div>
           </div>
 
-          {/* 🔹 Botón de Google */}
           <div className="mt-4">
             <button
               type="button"
@@ -276,7 +309,6 @@ export default function RegisterLoginClient() {
           </div>
         </div>
           
-        {/* 🔹 Enlace a login */}
         <p className="mt-6 text-center text-sm text-gray-600">
           ¿Ya tienes cuenta?{" "}
           <Link href="/login" className="text-blue-500 hover:text-blue-700 font-medium">

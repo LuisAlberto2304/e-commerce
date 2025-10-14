@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase/config";
 import { useAuth } from "@/context/userContext";
+import { syncMedusaCustomerWithFirebase } from "@/utils/syncMedusaCustomer";
 
 export default function LoginPageClient() {
   const [email, setEmail] = useState("");
@@ -28,9 +29,26 @@ export default function LoginPageClient() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Redirigir al home después del login exitoso
+      // 1. Autenticar en Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("Usuario autenticado en Firebase:", userCredential.user.email);
+
+      // 2. Esperar un momento para que Firebase actualice el estado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 3. Sincronizar con Medusa
+      try {
+        await syncMedusaCustomerWithFirebase();
+        console.log("Usuario sincronizado con Medusa");
+      } catch (syncError: any) {
+        console.error("Error al sincronizar con Medusa:", syncError);
+        // No bloqueamos el login si falla la sincronización
+        // El usuario puede seguir usando la app
+      }
+
+      // 4. Redirigir
       router.push('/');
+      
     } catch (error: any) {
       console.error("Error en login:", error);
       
@@ -48,6 +66,9 @@ export default function LoginPageClient() {
         case "auth/wrong-password":
           setError("La contraseña es incorrecta");
           break;
+        case "auth/invalid-credential":
+          setError("Credenciales inválidas. Verifica tu correo y contraseña");
+          break;
         case "auth/too-many-requests":
           setError("Demasiados intentos fallidos. Intenta más tarde");
           break;
@@ -63,18 +84,36 @@ export default function LoginPageClient() {
     try {
       setLoading(true);
       setError("");
+      
+      // 1. Autenticar con Google
       await signInWithGoogle();
-      // La redirección se maneja dentro de signInWithGoogle en el contexto
+      
+      // 2. Esperar a que Firebase actualice el estado
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 3. Sincronizar con Medusa
+      try {
+        await syncMedusaCustomerWithFirebase();
+        console.log("Usuario de Google sincronizado con Medusa");
+      } catch (syncError: any) {
+        console.error("Error al sincronizar Google con Medusa:", syncError);
+        // No bloqueamos el login
+      }
+      
+      // La redirección se maneja en el contexto o aquí
+      router.push('/');
+      
     } catch (error: any) {
       console.error("Error con Google Sign-In:", error);
       
-      // Mensajes de error más específicos para Google
-      if (error.message.includes('no está habilitado')) {
+      if (error.message?.includes('no está habilitado')) {
         setError("El inicio de sesión con Google no está configurado correctamente.");
-      } else if (error.message.includes('popup fue bloqueado')) {
+      } else if (error.message?.includes('popup fue bloqueado')) {
         setError("El popup de Google fue bloqueado. Permite popups para este sitio.");
-      } else if (error.message.includes('Cerraste la ventana')) {
+      } else if (error.message?.includes('Cerraste la ventana')) {
         setError("Cerraste la ventana de inicio de sesión de Google.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setError("Cerraste la ventana de Google antes de completar el inicio de sesión.");
       } else {
         setError("Error al iniciar sesión con Google");
       }
@@ -104,7 +143,6 @@ export default function LoginPageClient() {
           Iniciar Sesión
         </h1>
 
-        {/* 🔹 Mostrar error */}
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
@@ -159,7 +197,6 @@ export default function LoginPageClient() {
           </div>
         </form>
 
-        {/* 🔹 Separador */}
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -170,7 +207,6 @@ export default function LoginPageClient() {
             </div>
           </div>
 
-          {/* 🔹 Botón de Google */}
           <div className="mt-4">
             <button
               type="button"
