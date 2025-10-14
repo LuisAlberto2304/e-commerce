@@ -16,11 +16,12 @@ export async function syncMedusaCustomerWithFirebase() {
       uid: user.uid
     });
 
-    const res = await fetch("https://caissoned-uncorrelative-dedra.ngrok-free.dev/customer", {
+    // LLAMADA A LA RUTA INTERNA (proxy) -> evita CORS/preflight
+    const res = await fetch("/api/sync-customer", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true", // Para ngrok
+        "Authorization": `Bearer ${idToken}` // opcional, útil si quieres validar en el server
       },
       body: JSON.stringify({
         email: user.email,
@@ -30,7 +31,7 @@ export async function syncMedusaCustomerWithFirebase() {
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      console.error("Error en respuesta de Medusa:", errorData);
+      console.error("Error en respuesta del proxy:", errorData);
       throw new Error(errorData.error || "No se pudo sincronizar el usuario con Medusa");
     }
 
