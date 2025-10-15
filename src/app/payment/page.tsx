@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+const MEDUSA_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/Button";
 import Link from "next/link";
@@ -153,24 +155,90 @@ export default function PaymentPage() {
     }
   };
 
-  const handleSuccess = () => {
-    // Crear el pedido final y limpiar localStorage
-    const finalOrder = {
-      id: Date.now(),
-      ...order,
-      shipping: shippingCost,
-      shippingMethod,
-      total: totalWithTax,
-      createdAt: new Date().toISOString(),
-    };
+  const handleSuccess = async () => {
+    try {
+      // Crear carrito en Medusa vía proxy
+      const cartRes = await fetch("/api/medusa/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        
+      });
+      
+      const medusaCart = await cartRes.json();
+      const cartId = medusaCart?.cart?.id;
 
-    const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-    existingOrders.push(finalOrder);
-    localStorage.setItem("orders", JSON.stringify(existingOrders));
-    localStorage.removeItem("cart");
-    localStorage.removeItem("currentOrder");
+      if (!cartId) throw new Error("No se pudo crear el carrito en Medusa");
 
-    window.location.href = "/success";
+
+      // Agregar productos al carrito vía proxy
+      const cartItemsRes = await fetch("/api/medusa/cart-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cartId,
+          items: order.items.map((item: any) => ({
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const cartItemsData = await cartItemsRes.json();
+      if (!cartItemsData.success) throw new Error("No se pudieron agregar los productos al carrito");
+
+      const completeRes = await fetch("/api/medusa/complete-cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartId: medusaCart.cart.id }), // asegúrate de usar el campo correcto
+        });
+
+        const completed = await completeRes.json();
+
+        if (!completeRes.ok || !completed.order?.id) {
+          console.error("❌ Error completando la orden:", completed);
+          throw new Error("No se pudo completar la orden en Medusa");
+        }
+
+        console.log("✅ Orden creada en Medusa:", completed.order);
+
+      // 4️⃣ Actualizar inventario vía proxy
+      const updateInventoryRes = await fetch("/api/medusa/update-inventory", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: order.items.map((item: any) => ({
+            variantId: item.variant_id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+      const inventoryData = await updateInventoryRes.json();
+      console.log("📦 Inventario actualizado correctamente", inventoryData);
+
+      // 5️⃣ Guardar orden localmente
+      const finalOrder = {
+        id: Date.now(),
+        ...order,
+        medusaOrderId: completed.order.id,
+        shipping: shippingCost,
+        shippingMethod,
+        createdAt: new Date().toISOString(),
+      };
+
+      const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
+      existingOrders.push(finalOrder);
+      localStorage.setItem("orders", JSON.stringify(existingOrders));
+
+      localStorage.removeItem("cart");
+      localStorage.removeItem("currentOrder");
+
+      // 6️⃣ Redirigir al success
+      alert("Orden completada y stock actualizado correctamente");
+      window.location.href = "/success";
+    } catch (error) {
+      console.error("❌ Error al procesar la orden:", error);
+      alert("El pago se realizó, pero hubo un problema con la orden o el inventario.");
+    }
   };
 
 
@@ -182,12 +250,13 @@ export default function PaymentPage() {
   // Obtener el porcentaje de IVA desde el pedido
   const taxRate = order.taxRate || 0.16; // usa 16% por defecto si no existe
 
-  // Recalcular el IVA considerando el subtotal y el envío
-  const recalculatedTax = (subtotal + shippingCost) * taxRate;
+  // Calcular IVA separado para productos y envío
+  const productTax = subtotal * taxRate;
+  const shippingTax = shippingCost * taxRate;
+  const totalTax = productTax + shippingTax;
 
   // Total con IVA y envío
-  const totalWithTax = subtotal + shippingCost + recalculatedTax;
-
+  const totalWithTax = subtotal + shippingCost + totalTax;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -293,56 +362,57 @@ export default function PaymentPage() {
 
         {/* 💰 Resumen del pedido */}
         <div className="bg-white p-8 shadow-lg rounded-xl h-fit">
-          <h2 className="text-xl font-bold mb-4 text-gray-800">Resumen</h2>
+        <h2 className="text-xl font-bold mb-4 text-gray-800">Resumen</h2>
 
-          {order.items.map((item: any) => (
-            <div
-              key={item.id}
-              className="flex justify-between items-center mb-2 text-gray-700"
-            >
-              <span>{item.title}</span>
-              <span>
-                {item.quantity} × ${item.price.toFixed(2)}
-              </span>
-            </div>
-          ))}
+        {order.items.map((item: any) => (
+          <div
+            key={item.id}
+            className="flex justify-between items-center text-gray-700"
+          >
+            <span>{item.title}</span>
+            <span>
+              {item.quantity} × ${item.price.toFixed(2)}
+            </span>
+          </div>
+        ))}
 
-          <p className="flex justify-between">
-            <span>Envío ({shippingMethod} - {order.shippingZone}):</span>
-            <span>${shippingCost.toFixed(2)}</span>
-          </p>
+        {/* Costo de envío */}
+        <p className="flex justify-between text-gray-800">
+          <span>Envío ({shippingMethod} - {order.shippingZone}):</span>
+          <span>${shippingCost.toFixed(2)}</span>
+        </p>
 
-           {order.tax !== undefined && (
-            <p className="flex justify-between text-gray-800">
-              <span>IVA (16%) de producto:</span>
-              <span>${order.tax.toFixed(2)}</span>
-            </p>
-          )}
+        
 
-          <hr className="my-4" />
-          <p className="flex justify-between text-gray-800">
-            <span>Subtotal:</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </p>
+        
+        
+        {/* Subtotal (productos + envío) */}
+        <p className="flex justify-between text-gray-800">
+          <span>Subtotal:</span>
+          <span>${total.toFixed(2)}</span>
+        </p>
 
-          <p className="flex justify-between text-gray-800">
-            <span>Envío ({shippingMethod} - {order.shippingZone}):</span>
-            <span>${shippingCost.toFixed(2)}</span>
-          </p>
+        <hr className="my-4" />
 
-          <p className="flex justify-between text-gray-800">
-            <span>IVA ({(taxRate * 100).toFixed(0)}%) de envío:</span>
-            <span>${recalculatedTax.toFixed(2)}</span>
-          </p>
+        {/* IVA separado */}
+        <p className="flex justify-between text-gray-800">
+          <span>IVA ({(taxRate * 100).toFixed(0)}%) productos:</span>
+          <span>${productTax.toFixed(2)}</span>
+        </p>
 
-          <hr className="my-4" />
+        <p className="flex justify-between text-gray-800">
+          <span>IVA ({(taxRate * 100).toFixed(0)}%) envío:</span>
+          <span>${shippingTax.toFixed(2)}</span>
+        </p>
 
-          <p className="flex justify-between font-bold text-lg text-gray-800 mt-2">
-            <span>Total:</span>
-            <span>${totalWithTax.toFixed(2)}</span>
-          </p>
+        <hr className="my-4" />
 
-        </div>
+        {/* Total final */}
+        <p className="flex justify-between font-bold text-lg text-gray-800 mt-2">
+          <span>Total:</span>
+          <span>${totalWithTax.toFixed(2)}</span>
+        </p>
+      </div>
       </div>
     </div>
   );
