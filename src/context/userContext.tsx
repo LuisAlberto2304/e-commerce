@@ -11,12 +11,14 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { syncMedusaCustomerWithFirebase } from "@/utils/syncMedusaCustomer";
+import { loginMedusaCustomer } from "@/utils/medusaAuth";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  medusaToken: string | null; // <--- NUEVO
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +39,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
+  const [medusaToken, setMedusaToken] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -133,11 +136,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginMedusa = async (email: string, password: string) => {
+    const token = await loginMedusaCustomer(email, password);
+    setMedusaToken(token);
+    return token;
+  };
+
   const value = {
     user,
     loading,
     signInWithGoogle,
-    logout
+    logout,
+    medusaToken,
+    loginMedusa, // <--- NUEVO
   };
 
   return (

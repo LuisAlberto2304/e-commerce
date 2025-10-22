@@ -7,6 +7,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase/config";
 import { useAuth } from "@/context/userContext";
 import { syncMedusaCustomerWithFirebase } from "@/utils/syncMedusaCustomer";
+import { loginMedusaCustomer } from "@/utils/medusaAuth";
 
 export default function LoginPageClient() {
   const [email, setEmail] = useState("");
@@ -14,7 +15,7 @@ export default function LoginPageClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, setMedusaToken } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +47,17 @@ export default function LoginPageClient() {
         // El usuario puede seguir usando la app
       }
 
-      // 4. Redirigir
+      // 4. Autenticar en Medusa y guardar el token
+      try {
+        const medusaToken = await loginMedusaCustomer(email, password);
+        setMedusaToken(medusaToken);
+        console.log("Usuario autenticado en Medusa");
+      } catch (err) {
+        console.error("Error autenticando en Medusa:", err);
+        // Puedes mostrar un error si lo deseas
+      }
+
+      // 5. Redirigir
       router.push('/');
       
     } catch (error: any) {
