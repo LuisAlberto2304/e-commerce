@@ -30,6 +30,25 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   const [taxRate, setTaxRate] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
 
+  // ✅ Recuperar datos si hubo un checkout interrumpido
+  useEffect(() => {
+    const savedProgress = localStorage.getItem("checkout-progress");
+    if (savedProgress) {
+      const data = JSON.parse(savedProgress);
+
+      if (data.step === "address") {
+        setFormData(data.formData || formData);
+        setShipping(data.shipping || 0);
+        setShippingDetails(data.shippingDetails || {});
+        setSubtotal(data.subtotal || 0);
+        setTax(data.tax || 0);
+        setTaxRate(data.taxRate || 0);
+        console.log("🧩 Checkout interrumpido restaurado:", data);
+      }
+    }
+  }, []);
+
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -82,6 +101,8 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     fetchShippingRates();
   }, [city]);
 
+  
+
   async function calculateShipping(country: string, weight: number) {
     try {
       const res = await fetch("/api/shipping", {
@@ -117,6 +138,26 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     }
   }, []);
 
+  // ✅ Guardar progreso del checkout cada vez que cambien los datos del formulario o el envío
+  useEffect(() => {
+    // No guardar si el formulario está vacío
+    if (!formData.fullName && !formData.email && !formData.street) return;
+
+    const checkoutProgress = {
+      step: "address", // paso actual
+      formData,
+      shipping,
+      shippingDetails,
+      subtotal,
+      tax,
+      taxRate,
+      cartItems,
+    };
+
+    localStorage.setItem("checkout-progress", JSON.stringify(checkoutProgress));
+  }, [formData, shipping, shippingDetails, subtotal, tax, taxRate, cartItems]);
+
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,6 +190,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   });
 
   if (res.ok) {
+    localStorage.removeItem("checkout-progress");
     localStorage.setItem("currentOrder", JSON.stringify(orderData));
     router.push("/payment");
   } else {

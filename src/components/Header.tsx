@@ -3,7 +3,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/userContext";
-import '../styles/globals.css'
 import { ShoppingCart, User, LogOut, LogIn, UserPlus } from "lucide-react";
 
 export const Header = () => {
@@ -120,44 +119,51 @@ export const Header = () => {
             >
               Todos los productos
             </Link>
+            <Link 
+              href="/orders" 
+              onClick={closeMenu} 
+              className="header__category-link text-gray-700 hover:text-blue-600 transition-colors font-medium"
+            >
+              Historial de compras
+            </Link>
           </div>
 
           {/* Sección de usuario */}
           <div className="header__user-section">
             {user ? (
-              <div className="flex items-center gap-4">
-                {/* Información del usuario - Mejor organizada */}
-                <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+              <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
+                {/* Información del usuario */}
+                <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 w-full sm:w-auto justify-center sm:justify-start">
                   <User size={18} className="text-blue-600" />
-                  <div className="flex flex-col">
-                    <span className="text-xs text-gray-500">Hola,</span>
-                    <span className="text-sm font-medium text-gray-800 leading-none">
+                  <div className="flex flex-col text-center sm:text-left">
+                    <span className="text-xs text-gray-500 leading-none">Hola,</span>
+                    <span className="text-sm font-medium text-gray-800 leading-none truncate max-w-[150px] sm:max-w-none">
                       {getDisplayName()}
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Botón de cerrar sesión */}
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                  className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
                 >
                   <LogOut size={16} />
-                  <span className="hidden sm:inline">Salir</span>
+                  <span>Salir</span>
                 </button>
               </div>
             ) : (
-              <div className="header__buttons flex items-center gap-3">
-                <Link href="/login" onClick={closeMenu}>
-                  <button className="px-4 py-2 text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium">
+              <div className="header__buttons flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full">
+                <Link href="/login" onClick={closeMenu} className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto px-4 py-2 text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer">
                     <LogIn size={16} />
-                    <span className="hidden sm:inline">Entrar</span>
+                    <span>Entrar</span>
                   </button>
                 </Link>
-                <Link href="/register" onClick={closeMenu}>
-                  <button className="px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium">
+                <Link href="/register" onClick={closeMenu} className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer">
                     <UserPlus size={16} />
-                    <span className="hidden sm:inline">Registrarse</span>
+                    <span>Registrarse</span>
                   </button>
                 </Link>
               </div>

@@ -9,10 +9,11 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import StockStatus from "@/components/StockStatus";
 import ProductCarousel from "@/components/ProductCarousel";
 import ProductReviews from "@/components/ProductReviews";
-import { mockRecommendedProducts, mockReviews } from "@/app/data/mockData";
+import { mockReviews } from "@/app/data/mockData";
 import Image from "next/image";
 import { CardProps } from "@/components/ProductCardCarousel";
 import type { ProductFromAPI } from '@/utils/getRecommendedProducts';
+import { useCart } from "@/context/CartContext";
 
 type Props = { 
   id: string;
@@ -158,7 +159,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
               id: p.id,
               title: p.title || "Producto sin nombre",
               description: p.description || "",
-              imageUrl: getAbsoluteImageUrl(p.images?.[0]?.url) || "/placeholder-image.jpg",
+              imageUrl: getAbsoluteImageUrl(p.images?.[0]?.url) || "/images/placeholder-image.png",
               price: p.variants?.[0]?.prices?.[0]?.amount
                 ? `$${(p.variants[0].prices[0].amount / 100).toFixed(2)}`
                 : "$0.00",
@@ -218,10 +219,15 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
     { label: producto?.title || 'Cargando...' },
   ];
 
-  const getStockQuantity = () =>
-    selectedVariant?.inventory_quantity ||
-    producto?.variants?.[0]?.inventory_quantity ||
-    0;
+  const getStockQuantity = () => {
+    const variant = selectedVariant || producto?.variants?.[0];
+    if (!variant) return 0;
+
+    // Compatibilidad con versiones de Medusa
+    const quantity = variant.total_quantity ?? variant.inventory_quantity ?? 0;
+    return Math.max(0, quantity);
+  };
+
 
   const handleOptionChange = (optionTitle: string, value: string) => {
     const newOptions = { ...selectedOptions, [optionTitle]: value };
@@ -275,6 +281,34 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   if (error) return <div className="max-w-6xl mx-auto p-6 text-center text-red-600">{error}</div>;
   if (!producto) return <div className="max-w-6xl mx-auto p-6 text-center">Producto no encontrado</div>;
 
+  
+
+ const handleAddToCart = () => {
+  const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+  const existingItem = existingCart.find(
+    (item: any) => item.id === selectedVariant.id
+  );
+
+  if (existingItem) {
+    existingItem.quantity += quantity;
+  } else {
+    existingCart.push({
+      id: selectedVariant.id,
+      title: producto.title,
+      price:
+        selectedVariant?.prices?.[0]?.amount
+          ? selectedVariant.prices[0].amount / 100
+          : 0,
+      image: selectedImage || producto.thumbnail,
+      quantity,
+    });
+  }
+
+  localStorage.setItem("cart", JSON.stringify(existingCart));
+  alert("Producto agregado al carrito ✅");
+};
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <Breadcrumbs items={breadcrumbItems} />
@@ -294,7 +328,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                     className="w-full h-full object-contain rounded-lg"
                     onError={() => {
                       console.error("❌ Error cargando imagen:", selectedImage);
-                      setSelectedImage("/placeholder-image.jpg");
+                      setSelectedImage("/images/placeholder-image.png");
                     }}
                     onLoad={() => console.log("✅ Imagen cargada correctamente")}
                   />
@@ -342,12 +376,12 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                     }`}
                   >
                     <img
-                      src={absoluteUrl || '/placeholder-image.jpg'}
+                      src={absoluteUrl || '/images/placeholder-image.png'}
                       alt={`${producto.title} - imagen ${idx + 1}`}
                       className="w-20 h-20 object-contain rounded-lg"
                       onError={(e) => {
                         console.error("❌ Error cargando miniatura:", absoluteUrl);
-                        e.currentTarget.src = '/placeholder-image.jpg';
+                        e.currentTarget.src = '/images/placeholder-image.png';
                       }}
                     />
                   </button>
@@ -423,6 +457,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
           {/* Botones de acción */}
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <button
+              onClick={handleAddToCart}
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-4 rounded-xl text-lg font-medium hover:bg-emerald-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={getStockQuantity() === 0}
             >

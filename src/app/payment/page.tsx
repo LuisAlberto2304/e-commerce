@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 const MEDUSA_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
 
@@ -14,6 +15,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import PayPalButton from "@/components/PayPalButton";
+import { useRouter } from "next/navigation";
 
 
 const stripePromise = loadStripe(
@@ -23,6 +25,7 @@ const stripePromise = loadStripe(
 function StripeCheckout({ order, totalWithTax, onSuccess }: any) {
   const stripe = useStripe();
   const elements = useElements();
+  const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,11 +57,29 @@ function StripeCheckout({ order, totalWithTax, onSuccess }: any) {
 
       if (result.error) {
         setError(result.error.message || "Error al procesar el pago");
+
+        localStorage.setItem(
+          "paymentError",
+          JSON.stringify({
+            step: "Pago con Stripe",
+            message: result.error.message || "Error al procesar el pago",
+          })
+        );
+
+        router.push("/failure");
       } else if (result.paymentIntent?.status === "succeeded") {
         onSuccess();
       }
     } catch (err: any) {
       setError(err.message);
+      localStorage.setItem(
+        "paymentError",
+        JSON.stringify({
+          step: "Conexión o servidor",
+          message: err.message,
+        })
+      );
+      router.push("/failure");
     } finally {
       setIsProcessing(false);
     }
@@ -89,8 +110,47 @@ export default function PaymentPage() {
   const [shippingMethod, setShippingMethod] = useState<string>("Estándar");
   const [iva, setIva] = useState<number>(0);
 
+  // ✅ Guardar progreso del pago automáticamente
+  useEffect(() => {
+    if (!order) return; // No guardes si aún no hay orden cargada
+
+    const paymentProgress = {
+      step: "payment",
+      order,
+      paymentMethod,
+      shippingMethod,
+      shippingCost,
+      estimatedDays,
+      iva,
+    };
+
+    localStorage.setItem("payment-progress", JSON.stringify(paymentProgress));
+  }, [order, paymentMethod, shippingMethod, shippingCost, estimatedDays, iva]);
+
+  // ✅ Recuperar progreso del pago si el checkout fue interrumpido
+  useEffect(() => {
+    const savedPaymentProgress = localStorage.getItem("payment-progress");
+
+    if (savedPaymentProgress) {
+      const data = JSON.parse(savedPaymentProgress);
+      if (data.step === "payment") {
+        setOrder(data.order || null);
+        setPaymentMethod(data.paymentMethod || "card");
+        setShippingMethod(data.shippingMethod || "Estándar");
+        setShippingCost(data.shippingCost || 0);
+        setEstimatedDays(data.estimatedDays || 0);
+        setIva(data.iva || 0);
+
+        console.log("🧩 Pago interrumpido restaurado:", data);
+      }
+    }
+  }, []);
+
   // Recuperar el pedido desde localStorage
   useEffect(() => {
+    const savedPaymentProgress = localStorage.getItem("payment-progress");
+    if (savedPaymentProgress) return;
+
     const savedOrder = localStorage.getItem("currentOrder");
     if (savedOrder) {
       const parsedOrder = JSON.parse(savedOrder);
@@ -234,11 +294,26 @@ export default function PaymentPage() {
 
       // 6️⃣ Redirigir al success
       alert("Orden completada y stock actualizado correctamente");
+      localStorage.removeItem("payment-progress");
       window.location.href = "/success";
-    } catch (error) {
-      console.error("❌ Error al procesar la orden:", error);
-      alert("El pago se realizó, pero hubo un problema con la orden o el inventario.");
-    }
+    } catch (error: unknown) {
+        console.error("❌ Error al procesar la orden:", error);
+
+        let message = "Ocurrió un problema al completar la orden";
+        if (error instanceof Error) {
+          message = error.message;
+        }
+
+        localStorage.setItem(
+          "paymentError",
+          JSON.stringify({
+            step: "Procesamiento de orden en Medusa",
+            message,
+          })
+        );
+
+        window.location.href = "/failure";
+      }
   };
 
 

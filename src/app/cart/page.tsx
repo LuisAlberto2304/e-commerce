@@ -25,23 +25,24 @@ export default function CartPage() {
   //Detectar país automáticamente por IP
   useEffect(() => {
     const fetchCountry = async () => {
-      try {
-        const res = await fetch("https://ipapi.co/json/");
-        const data = await res.json();
-        const countryCode = data.country_code || "MX";
+    try {
+      const res = await fetch("/api/location");
+      const data = await res.json();
 
-        console.log("🌎 País detectado:", data.country_name, data.country_code);
+      const countryCode = data.country_code || "MX";
+      console.log("🌎 País detectado:", data.country_name, countryCode);
 
-        setCountry(countryCode);
-        setTaxRate(TAX_RATES[countryCode] ?? 0.16);
-      } catch (error) {
-        console.error("Error detectando país:", error);
-        setCountry("MX");
-        setTaxRate(0.16);
-      } finally {
-        setIsDetecting(false);
-      }
-    };
+      setCountry(countryCode);
+      setTaxRate(TAX_RATES[countryCode] ?? 0.16);
+    } catch (error) {
+      console.error("Error detectando país:", error);
+      setCountry("MX");
+      setTaxRate(0.16);
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
 
     fetchCountry();
   }, []);
