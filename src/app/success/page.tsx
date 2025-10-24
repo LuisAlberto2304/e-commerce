@@ -7,6 +7,8 @@ import Link from "next/link";
 export default function SuccessPage() {
   const [order, setOrder] = useState<any>(null);
 
+  
+
   useEffect(() => {
     const orders = JSON.parse(localStorage.getItem("orders") || "[]");
     if (orders.length > 0) {

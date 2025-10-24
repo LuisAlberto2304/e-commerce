@@ -48,6 +48,8 @@ const securityHeaders = [
         https://firestore.googleapis.com
         https://firebase.googleapis.com
         https://firebaseinstallations.googleapis.com
+        https://sandbox.paypal.com
+        https://countriesnow.space
         https://ipapi.co;
 
       frame-src

@@ -1,36 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextRequest, NextResponse } from 'next/server';
+import medusaClient from '@/app/lib/medusa-client';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/store/carts`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY || "",
-        },
-      }
-    );
-
-    console.log("📡 Medusa status:", response.status);
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("❌ Error al crear carrito en Medusa:", text);
-      return NextResponse.json(
-        { error: "Error al crear el carrito en Medusa", details: text },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    console.log("✅ Carrito creado correctamente:", data);
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("❌ Error general en /cart:", error);
+    const cart = await medusaClient.carts.create();
+    
+    return NextResponse.json({ 
+      success: true, 
+      cart: cart.cart 
+    });
+  } catch (error: any) {
+    console.error('Error creating Medusa cart:', error);
     return NextResponse.json(
-      { error: "Fallo de conexión o error interno" },
+      { error: error.message || 'Failed to create cart' },
       { status: 500 }
     );
   }

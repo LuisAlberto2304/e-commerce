@@ -13,10 +13,12 @@ export default function PayPalButton({
   amount,
   onSuccess,
   onError,
+  disabled,
 }: {
   amount: number;
   onSuccess: (details: any) => void;
   onError: (err: any) => void;
+  disabled?: boolean
 }) {
   const paypalRef = useRef<HTMLDivElement>(null);
 

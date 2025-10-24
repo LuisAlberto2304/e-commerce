@@ -75,7 +75,7 @@ export default function CartPage() {
           {/* Lista de productos */}
           <div className="md:col-span-2 space-y-4">
             {cart.map((item) => (
-              <div key={item.id} className="flex gap-4 border rounded-lg p-4 shadow-sm">
+              <div key={`${item.variantId}-${JSON.stringify(item.selectedOptions)}`} className="flex gap-4 border rounded-lg p-4 shadow-sm">
                 <Image
                   src={item.image}
                   alt={item.title}
@@ -85,6 +85,14 @@ export default function CartPage() {
                 />
                 <div className="flex-1">
                   <h2 className="font-semibold">{item.title}</h2>
+                  
+                  {/* Mostrar opciones seleccionadas si existen */}
+                  {item.variantDescription && (
+                    <p className="text-gray-600 text-sm mt-1">
+                      {item.variantDescription}
+                    </p>
+                  )}
+                  
                   <p className="text-gray-600 text-sm">
                     Precio unitario: ${item.price.toFixed(2)}
                   </p>
@@ -94,22 +102,22 @@ export default function CartPage() {
 
                   <div className="flex items-center gap-2 mt-2">
                     <button
-                      onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                      className="px-2 border rounded"
+                      onClick={() => updateQuantity(item.variantId!, Math.max(1, item.quantity - 1))}
+                      className="px-3 py-1 border rounded hover:bg-gray-100"
                     >
                       −
                     </button>
-                    <span>{item.quantity}</span>
+                    <span className="px-3">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="px-2 border rounded"
+                      onClick={() => updateQuantity(item.variantId!, item.quantity + 1)}
+                      className="px-3 py-1 border rounded hover:bg-gray-100"
                     >
                       +
                     </button>
                   </div>
 
                   <button
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => removeFromCart(item.variantId!)}
                     className="text-red-500 text-sm mt-2 hover:underline"
                   >
                     Eliminar
