@@ -17,6 +17,7 @@
     "firebase": "^12.4.0",
     "firebase-tools": "^14.19.1",
     "framer-motion": "^12.23.22",
+    "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lodash": "^4.17.21",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash": "^4.17.20",
     "@types/node": "^20",
     "@types/react": "^19",

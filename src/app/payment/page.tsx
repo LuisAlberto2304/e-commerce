@@ -292,99 +292,106 @@ export default function PaymentPage() {
     }
   };
 
-  const handleSuccess = async () => {
-    try {
-      setIsProcessing(true);
+const handleSuccess = async () => {
+  try {
+    setIsProcessing(true);
 
-      // 1. Crear carrito en Medusa y agregar items
-      const cartId = await createMedusaOrder();
+    // 🧠 Recuperar info guardada del checkout
+    const paymentPrep = JSON.parse(localStorage.getItem("payment-preparation") || "{}");
+    const { customerEmail, shippingAddress, shippingOptionId, items } = paymentPrep;
 
-      // 2. Completar la orden (ahora incluye actualización de inventario REAL)
-      const completeRes = await fetch("/api/medusa/complete-cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          cartId,
-          email: order.email || "customer@example.com",
-          shipping_address: order.shippingAddress || {},
-          payment_method: paymentMethod,
-          items: cart.map(item => ({
-            variant_id: item.variantId,
-            quantity: item.quantity,
-            title: item.title
-          }))
-        }),
-      });
+    console.log("💿 Datos cargados desde localStorage:", paymentPrep);
 
-      const completed = await completeRes.json();
+    // 🛒 1. Crear carrito
+    const createCartRes = await fetch("/api/medusa/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        region_id: process.env.NEXT_PUBLIC_MEDUSA_DEFAULT_REGION,
+      }),
+    });
+    const cartData = await createCartRes.json();
+    const cartId = cartData.cart?.id;
+    if (!cartId) throw new Error("No se pudo crear el carrito");
 
-      if (!completed.success) {
-        // Manejar error de inventario específicamente
-        if (completed.inventory_error) {
-          throw new Error(`Error de inventario: ${completed.inventory_error}`);
-        }
-        throw new Error(completed.error || "No se pudo procesar la orden");
-      }
+    console.log("🛒 Carrito creado:", cartId);
 
-      console.log("✅ Orden procesada con actualización de inventario:", completed);
+    // 👤 2. Asociar cliente + dirección
+    await fetch(`/api/medusa/cart/${cartId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: customerEmail,
+        shipping_address: shippingAddress,
+      }),
+    });
 
-      // 3. Verificar estado del inventario
-      if (completed.inventory_updated) {
-        console.log("📦 Inventario actualizado exitosamente");
-        console.log("Items actualizados:", completed.inventory_updates);
-      } else {
-        console.warn("⚠️ El inventario no se actualizó completamente");
-      }
+    console.log("📦 Dirección asociada al carrito");
 
-      // 4. Guardar orden localmente (igual que antes)
-      const finalOrder = {
-        id: Date.now(),
-        ...order,
-        medusaOrderId: completed.order?.order?.id,
-        completedViaAPI: completed.completed_via_api,
-        inventoryUpdated: completed.inventory_updated,
-        inventoryUpdates: completed.inventory_updates,
-        paymentMethod,
-        shipping: shippingCost,
-        shippingMethod,
-        createdAt: new Date().toISOString(),
-        items: cart,
-      };
+    // 🧱 3. Agregar productos
+    await fetch("/api/medusa/cart-item", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cartId,
+        items,
+      }),
+    });
 
-      const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-      existingOrders.push(finalOrder);
-      localStorage.setItem("orders", JSON.stringify(existingOrders));
+    console.log("🧱 Productos agregados");
 
-      // 5. Limpiar y redirigir
-      clearCart();
-      localStorage.removeItem("cart");
-      localStorage.removeItem("currentOrder");
-      localStorage.removeItem("payment-progress");
+    // 🚚 4. Agregar método de envío
+    await fetch(`/api/medusa/cart/${cartId}/shipping`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        option_id: shippingOptionId,
+      }),
+    });
 
-      console.log("🎉 Orden completada con gestión de inventario");
-      window.location.href = "/success";
+    console.log("🚚 Método de envío agregado");
 
-    } catch (error: unknown) {
-      console.error("❌ Error al procesar la orden:", error);
-      
-      let message = "Ocurrió un problema al completar la orden";
-      if (error instanceof Error) {
-        message = error.message;
-      }
+    // 💰 5. Crear colección de pago
+    const payColRes = await fetch("/api/medusa/payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cart_id: cartId,
+      }),
+    });
 
-      localStorage.setItem(
-        "paymentError",
-        JSON.stringify({
-          step: "Procesamiento de orden",
-          message,
-        })
-      );
+    const payCol = await payColRes.json();
+    console.log("💳 Colección de pago creada:", payCol);
 
-      window.location.href = "/failure";
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+    // ✅ 6. Completar carrito
+    const completeRes = await fetch("/api/medusa/complete-cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cartId,
+        email: customerEmail,
+        shipping_address: shippingAddress,
+        payment_method: "manual",
+        items,
+      }),
+    });
+
+    const completed = await completeRes.json();
+    console.log("✅ Carrito completado:", completed);
+
+    // 🧹 Limpieza y redirección
+    localStorage.removeItem("currentOrder");
+    localStorage.removeItem("payment-preparation");
+    localStorage.removeItem("checkout-progress");
+
+    window.location.href = "/success";
+  } catch (error) {
+    console.error("❌ Error en el flujo Medusa:", error);
+    alert("Error al procesar el pedido");
+  } finally {
+    setIsProcessing(false);
+  }
+};
   
   if (!order) return null;
 

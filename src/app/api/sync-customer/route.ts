@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
 
     const medusaUrl = `${medusaBase}/customer`;
 
-    // Llamada server-side: evita CORS/preflight del navegador
     const res = await fetch(medusaUrl, {
       method: "POST",
       headers: {
@@ -30,6 +29,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data);
   } catch (err: any) {
     console.error("Error proxying to Medusa /customer:", err);
+    return NextResponse.json({ error: "Internal server error", details: String(err) }, { status: 500 });
+  }
+}
+
+// ⬇️ NUEVO: Manejar GET requests
+export async function GET(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization');
+    
+    if (!authHeader) {
+      return NextResponse.json({ error: "No authorization header" }, { status: 401 });
+    }
+
+    const medusaBase = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
+    if (!medusaBase) {
+      return NextResponse.json({ error: "No MEDUSA backend configured" }, { status: 500 });
+    }
+
+    const medusaUrl = `${medusaBase}/customer`;
+
+    const res = await fetch(medusaUrl, {
+      method: "GET",
+      headers: {
+        "Authorization": authHeader,
+        "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY || ""
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return NextResponse.json({ error: "Medusa error", details: data }, { status: res.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (err: any) {
+    console.error("Error proxying to Medusa /customer GET:", err);
     return NextResponse.json({ error: "Internal server error", details: String(err) }, { status: 500 });
   }
 }

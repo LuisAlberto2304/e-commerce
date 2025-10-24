@@ -11,16 +11,23 @@ export async function POST(req: Request) {
 
     const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
     const apiKey = process.env.MEDUSA_ADMIN_API_KEY;
+    const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
 
     console.log(`📦 Actualizando inventario: ${variantId} - ${quantity} unidades`);
     console.log(`🔑 API Key presente: ${!!apiKey}`);
 
     // 🔹 Consultar la variante actual (endpoint público)
     console.log(`🔍 Consultando variante: ${variantId}`);
-    const variantRes = await fetch(`${medusaUrl}/store/variants/${variantId}`);
-    
+    const variantRes = await fetch(`${medusaUrl}/store/variants/${variantId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(publishableKey && { 'x-publishable-api-key': publishableKey })
+      }
+    });
+
     if (!variantRes.ok) {
-      throw new Error(`Error al obtener variante: ${variantRes.status}`);
+      const errorText = await variantRes.text();
+      throw new Error(`Error al obtener variante: ${variantRes.status} - ${errorText}`);
     }
 
     const variantData = await variantRes.json();

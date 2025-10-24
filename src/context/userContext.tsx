@@ -10,7 +10,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { auth } from '@/firebase/config';
-import { syncMedusaCustomerWithFirebase } from "@/utils/syncMedusaCustomer";
+import { syncMedusaCustomerWithFirebase, getMedusaCustomerWithFirebaseToken } from "@/utils/syncMedusaCustomer";
 import { loginMedusaCustomer } from "@/utils/medusaAuth";
 
 interface AuthContextType {
@@ -18,7 +18,9 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  medusaToken: string | null; // <--- NUEVO
+  medusaToken: string | null;
+  customer: any | null;
+  loginMedusa: (email: string, password: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,82 +40,124 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialAuthCheck, setInitialAuthCheck] = useState(false);
   const [medusaToken, setMedusaToken] = useState<string | null>(null);
+  const [customer, setCustomer] = useState<any | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
+  // Cargar token desde localStorage al iniciar
+  useEffect(() => {
+    const savedToken = localStorage.getItem('medusaToken');
+    const savedCustomer = localStorage.getItem('medusaCustomer');
+    
+    if (savedToken) {
+      console.log('🔑 Token recuperado de localStorage');
+      setMedusaToken(savedToken);
+    }
+    
+    if (savedCustomer) {
+      try {
+        setCustomer(JSON.parse(savedCustomer));
+      } catch (e) {
+        console.error('Error parsing saved customer:', e);
+      }
+    }
+  }, []);
+
+  // Guardar en localStorage cuando cambien
+  useEffect(() => {
+    if (medusaToken) {
+      localStorage.setItem('medusaToken', medusaToken);
+    } else {
+      localStorage.removeItem('medusaToken');
+    }
+  }, [medusaToken]);
+
+  useEffect(() => {
+    if (customer) {
+      localStorage.setItem('medusaCustomer', JSON.stringify(customer));
+    } else {
+      localStorage.removeItem('medusaCustomer');
+    }
+  }, [customer]);
+
+  // Sincronizar con Medusa cuando cambie el usuario de Firebase
+  const syncWithMedusa = async (firebaseUser: User) => {
+    try {
+      console.log('🔄 Sincronizando con Medusa...');
+      
+      // Intentar obtener customer existente
+      const medusaData = await getMedusaCustomerWithFirebaseToken();
+      
+      if (medusaData.medusaToken && medusaData.customer) {
+        setMedusaToken(medusaData.medusaToken);
+        setCustomer(medusaData.customer);
+        console.log('✅ Customer existente encontrado en Medusa');
+      } else {
+        // Si no existe, crear uno nuevo
+        const syncResult = await syncMedusaCustomerWithFirebase();
+        if (syncResult.medusaToken && syncResult.customer) {
+          setMedusaToken(syncResult.medusaToken);
+          setCustomer(syncResult.customer);
+          console.log('✅ Nuevo customer creado en Medusa');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error sincronizando con Medusa:', error);
+      // No lanzar error para no bloquear el login
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser?.email || 'No user');
+      console.log('🔥 Auth state changed:', firebaseUser?.email || 'No user');
       
       setUser(firebaseUser);
       
-      // Si hay usuario y es la primera vez, sincronizar con Medusa
-      if (firebaseUser && !initialAuthCheck) {
-        try {
-          await syncMedusaCustomerWithFirebase();
-          console.log('Usuario sincronizado con Medusa en auth state change');
-        } catch (error) {
-          console.error('Error al sincronizar con Medusa en auth state:', error);
-          // No bloqueamos el flujo si falla la sincronización
+      if (firebaseUser) {
+        // Sincronizar con Medusa
+        await syncWithMedusa(firebaseUser);
+        
+        // Redirigir si está en login/register
+        if (pathname === '/login' || pathname === '/register') {
+          router.push('/');
         }
+      } else {
+        // Limpiar estado al logout
+        setMedusaToken(null);
+        setCustomer(null);
       }
       
-      setInitialAuthCheck(true);
       setLoading(false);
-      
-      // Redirigir solo si estamos en páginas de autenticación
-      if (firebaseUser && (pathname === '/login' || pathname === '/register')) {
-        router.push('/');
-      }
     });
 
     return () => unsubscribe();
-  }, [pathname, router, initialAuthCheck]);
+  }, [pathname, router]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
-    
-    // Configuración adicional para obtener siempre el consentimiento
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
       const result = await signInWithPopup(auth, provider);
-      console.log('Google sign-in successful:', result.user.email);
+      console.log('✅ Google sign-in successful:', result.user.email);
       
-      // Esperar un momento para que Firebase actualice el estado
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Esperar a que onAuthStateChanged maneje la sincronización
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Sincronizar con Medusa
-      try {
-        await syncMedusaCustomerWithFirebase();
-        console.log('Usuario de Google sincronizado con Medusa');
-      } catch (syncError) {
-        console.error('Error al sincronizar con Medusa:', syncError);
-        // No bloqueamos el login si falla la sincronización
-      }
-      
-      // Redirigir después de login exitoso
       router.push('/');
       
     } catch (error: any) {
-      console.error('Error signing in with Google:', error);
+      console.error('❌ Error signing in with Google:', error);
       
-      // Mapear errores específicos
       if (error.code === 'auth/operation-not-allowed') {
-        throw new Error('El inicio de sesión con Google no está habilitado. Contacta al administrador.');
+        throw new Error('El inicio de sesión con Google no está habilitado.');
       } else if (error.code === 'auth/popup-blocked') {
         throw new Error('El popup fue bloqueado. Permite popups para este sitio.');
       } else if (error.code === 'auth/popup-closed-by-user') {
         throw new Error('Cerraste la ventana de inicio de sesión.');
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Usuario canceló o hay múltiples popups
-        throw new Error('Operación cancelada. Intenta nuevamente.');
       } else if (error.code === 'auth/network-request-failed') {
         throw new Error('Error de red. Verifica tu conexión a internet.');
       } else {
@@ -125,22 +169,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      console.log('Usuario cerró sesión exitosamente');
-      
-      // Redirigir al login después de cerrar sesión
+      console.log('✅ Usuario cerró sesión exitosamente');
       router.push('/login');
-      
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('❌ Error signing out:', error);
       throw error;
     }
   };
 
   const loginMedusa = async (email: string, password: string) => {
-    const token = await loginMedusaCustomer(email, password);
-    setMedusaToken(token);
-    return token;
+    try {
+      const token = await loginMedusaCustomer(email, password);
+      setMedusaToken(token);
+      
+      console.log('🔐 Token de Medusa obtenido:', {
+        hasToken: !!token,
+        tokenPreview: token?.substring(0, 20) + '...'
+      });
+      
+      return token;
+    } catch (error) {
+      console.error('❌ Error obteniendo token de Medusa:', error);
+      throw error;
+    }
   };
+
+  // Debug
+  useEffect(() => {
+    console.log('🔐 Estado del contexto:', {
+      hasUser: !!user,
+      userEmail: user?.email,
+      hasMedusaToken: !!medusaToken,
+      hasCustomer: !!customer
+    });
+  }, [user, medusaToken, customer]);
 
   const value = {
     user,
@@ -148,7 +210,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInWithGoogle,
     logout,
     medusaToken,
-    loginMedusa, // <--- NUEVO
+    customer,
+    loginMedusa,
   };
 
   return (

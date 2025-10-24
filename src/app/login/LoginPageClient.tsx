@@ -15,7 +15,7 @@ export default function LoginPageClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { signInWithGoogle, setMedusaToken } = useAuth();
+  const { signInWithGoogle, loginMedusa } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,8 +49,7 @@ export default function LoginPageClient() {
 
       // 4. Autenticar en Medusa y guardar el token
       try {
-        const medusaToken = await loginMedusaCustomer(email, password);
-        setMedusaToken(medusaToken);
+        const medusaToken = await loginMedusa(email, password);
         console.log("Usuario autenticado en Medusa");
       } catch (err) {
         console.error("Error autenticando en Medusa:", err);

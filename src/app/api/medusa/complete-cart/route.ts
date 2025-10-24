@@ -1,9 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/medusa/complete-cart/route.ts - VERSIÓN CORREGIDA
 import { NextRequest, NextResponse } from 'next/server';
-import medusaClient from '@/app/lib/medusa-client';
 
-// Función updateInventory mejorada
+interface CartItem {
+  title: string;
+  quantity: number;
+  variant_id: string;
+}
+
+  const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
+
 const updateInventory = async (items: any[]) => {
   console.log('📦 Actualizando inventario para items:', items);
   
@@ -15,10 +21,8 @@ const updateInventory = async (items: any[]) => {
       const { variant_id, quantity } = item;
       console.log(`➖ Reduciendo stock: ${variant_id} - ${quantity} unidades`);
 
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      
-      // Llamar al endpoint de inventario
-      const inventoryResponse = await fetch(`${baseUrl}/api/inventory`, {
+      // ✅ LLAMA DIRECTAMENTE A MEDUSA, NO A TU ENDPOINT NEXT.JS
+      const inventoryResponse = await fetch(`${medusaUrl}/api/inventory`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -29,21 +33,12 @@ const updateInventory = async (items: any[]) => {
         }),
       });
 
-      // Manejo robusto de la respuesta
-      const responseText = await inventoryResponse.text();
-      console.log('📄 Respuesta de /api/inventory:', responseText.substring(0, 200));
-      
       if (!inventoryResponse.ok) {
-        throw new Error(`Error ${inventoryResponse.status}: ${responseText}`);
+        const errorText = await inventoryResponse.text();
+        throw new Error(`Error ${inventoryResponse.status}: ${errorText}`);
       }
 
-      // Parsear JSON
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error(`Respuesta no es JSON: ${responseText.substring(0, 100)}`);
-      }
+      const result = await inventoryResponse.json();
 
       if (result.success) {
         updatedItems.push({
@@ -78,6 +73,11 @@ const updateInventory = async (items: any[]) => {
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    
+    console.log('🔑 Token recibido en complete-cart:', token ? 'Sí' : 'No');
+    
     const { cartId, email, shipping_address, payment_method = 'manual', items = [] } = await request.json();
 
     if (!cartId) {
@@ -87,10 +87,18 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Procesando orden completa...', { 
       cartId, 
       itemsCount: items.length,
-      payment_method
+      payment_method,
+      authenticated: !!token
     });
+    
+    if (!publishableKey) {
+      return NextResponse.json(
+        { error: 'NEXT_PUBLIC_MEDUSA_API_KEY no configurada' },
+        { status: 500 }
+      );
+    }
 
-    // 1. Actualizar información del carrito (esto SÍ funciona según logs)
+    // 1. ACTUALIZAR CARRITO CON INFORMACIÓN DEL CLIENTE
     try {
       const updateData: any = {};
       
@@ -103,10 +111,26 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString()
       };
 
-      await medusaClient.carts.update(cartId, updateData);
-      console.log('✅ Carrito actualizado con información del cliente');
-    } catch (updateError) {
-      console.warn('⚠️ No se pudo actualizar información del carrito:', updateError);
+      console.log('📝 Actualizando carrito con:', updateData);
+
+      const updateResponse = await fetch(`${medusaUrl}/store/carts/${cartId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': publishableKey,
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (updateResponse.ok) {
+        console.log('✅ Carrito actualizado con información del cliente');
+      } else {
+        const errorData = await updateResponse.json();
+        console.warn('⚠️ No se pudo actualizar información del carrito:', errorData);
+      }
+    } catch (updateError: any) {
+      console.warn('⚠️ Error actualizando carrito:', updateError.message);
     }
 
     // 2. ACTUALIZAR INVENTARIO
@@ -123,15 +147,54 @@ export async function POST(request: NextRequest) {
       console.log('✅ Resultado inventario:', inventoryResult);
     }
 
-    // 3. CREAR ORDEN - Usar siempre orden manual para evitar problemas de pago
-    console.log('🎯 Creando orden manual...');
+    // 3. COMPLETAR CARRITO EN MEDUSA
+    console.log('🎯 Completando carrito en Medusa...');
     
-    const orderResult = {
-      order: {
-        id: `order_${Date.now()}`,
+    let orderResult;
+    let completedViaApi = false;
+
+    try {
+      const completeResponse = await fetch(`${medusaUrl}/store/carts/${cartId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': publishableKey,
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
+      
+      if (completeResponse.ok) {
+        const completedData = await completeResponse.json();
+        console.log('🔍 Respuesta completa de Medusa:', JSON.stringify(completedData, null, 2));
+        
+        // ✅ CORREGIDO: Usar completedData.order en lugar de completedData.data
+        if (completedData.type === 'order' && completedData.order) {
+          orderResult = completedData.order;
+          completedViaApi = true;
+          console.log('✅ Carrito completado en Medusa. Orden ID:', orderResult.id);
+        } else {
+          console.warn('⚠️ Respuesta inesperada de complete:', completedData);
+          throw new Error('Estructura de respuesta inesperada');
+        }
+      } else {
+        const errorData = await completeResponse.json();
+        console.error('❌ Error completando carrito:', {
+          status: completeResponse.status,
+          error: errorData
+        });
+        throw new Error(`Error ${completeResponse.status}: ${errorData.message}`);
+      }
+      
+    } catch (completeError: any) {
+      console.error('⚠️ Error completando carrito:', completeError.message);
+      console.log('📝 Creando orden manual como fallback...');
+      
+      // FALLBACK: Crear orden manual
+      orderResult = {
+        id: `order_manual_${Date.now()}`,
         status: 'pending',
         fulfillment_status: 'not_fulfilled',
-        payment_status: 'not_paid',
+        payment_status: 'awaiting',
         created_at: new Date().toISOString(),
         cart_id: cartId,
         email: email || 'customer@example.com',
@@ -141,17 +204,62 @@ export async function POST(request: NextRequest) {
           payment_method,
           inventory_updated: inventoryResult.success,
           inventory_updates: inventoryResult.updated,
-          inventory_failed: inventoryResult.failed
+          inventory_failed: inventoryResult.failed,
+          note: 'Orden creada manualmente debido a error en API de Medusa'
         }
+      };
+      completedViaApi = false;
+      console.log('✅ Orden manual creada:', orderResult.id);
+    }
+
+    // 4. ENVIAR EMAIL CON LA ORDEN CORRECTA
+    try {
+      console.log('📧 Enviando email para orden:', orderResult.id);
+      
+      const emailPayload: any = {
+        to: orderResult.email,
+        type: "confirmation",
+        custom_data: {
+          items: items.map((i: CartItem) => ({
+            title: i.title,
+            quantity: i.quantity,
+            variant_id: i.variant_id
+          }))
+        }
+      };
+
+      // Solo enviar order_id si es una orden real de Medusa
+      if (completedViaApi) {
+        emailPayload.order_id = orderResult.id;
+      } else {
+        // Para órdenes manuales, enviar datos en custom_data
+        emailPayload.custom_data.order_number = orderResult.id.replace('order_manual_', '');
+        emailPayload.custom_data.is_manual_order = true;
       }
-    };
-    
-    console.log('✅ Orden creada manualmente:', orderResult.order.id);
+
+      const emailResponse = await fetch(`${medusaUrl}/sendEmail`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-publishable-api-key": publishableKey
+        },
+        body: JSON.stringify(emailPayload),
+      });
+
+      if (emailResponse.ok) {
+        console.log('✅ Email enviado exitosamente');
+      } else {
+        const errorText = await emailResponse.text();
+        console.warn('⚠️ Error enviando email:', errorText);
+      }
+    } catch (emailError: any) {
+      console.warn('❌ Error enviando email:', emailError.message);
+    }
 
     return NextResponse.json({ 
       success: true, 
       order: orderResult,
-      completed_via_api: false,
+      completed_via_api: completedViaApi,
       inventory_updated: inventoryResult.success,
       inventory_updates: inventoryResult.updated,
       inventory_failed: inventoryResult.failed,
