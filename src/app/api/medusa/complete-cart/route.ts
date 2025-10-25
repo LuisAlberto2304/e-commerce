@@ -10,66 +10,67 @@ interface CartItem {
   const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
   const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
 
-const updateInventory = async (items: any[]) => {
-  console.log('📦 Actualizando inventario para items:', items);
+// const updateInventory = async (items: any[]) => {
+//   console.log('📦 Actualizando inventario para items:', items);
   
-  const updatedItems: any[] = [];
-  const failedItems: any[] = [];
+//   const updatedItems: any[] = [];
+//   const failedItems: any[] = [];
 
-  for (const item of items) {
-    try {
-      const { variant_id, quantity } = item;
-      console.log(`➖ Reduciendo stock: ${variant_id} - ${quantity} unidades`);
+//   for (const item of items) {
+//     try {
+//       const { variant_id, quantity } = item;
+//       console.log(`➖ Reduciendo stock: ${variant_id} - ${quantity} unidades`);
 
-      // ✅ LLAMA DIRECTAMENTE A MEDUSA, NO A TU ENDPOINT NEXT.JS
-      const inventoryResponse = await fetch(`${medusaUrl}/api/inventory`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          variantId: variant_id,
-          quantity: quantity
-        }),
-      });
+//       // ✅ LLAMA DIRECTAMENTE A MEDUSA, NO A TU ENDPOINT NEXT.JS
+//       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+//       const inventoryResponse = await fetch(`${baseUrl}/api/cart/inventory`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           variantId: variant_id,
+//           quantity: quantity
+//         }),
+//       });
 
-      if (!inventoryResponse.ok) {
-        const errorText = await inventoryResponse.text();
-        throw new Error(`Error ${inventoryResponse.status}: ${errorText}`);
-      }
+//       if (!inventoryResponse.ok) {
+//         const errorText = await inventoryResponse.text();
+//         throw new Error(`Error ${inventoryResponse.status}: ${errorText}`);
+//       }
 
-      const result = await inventoryResponse.json();
+//       const result = await inventoryResponse.json();
 
-      if (result.success) {
-        updatedItems.push({
-          variantId: variant_id,
-          quantityReduced: quantity,
-          status: 'success',
-          response: result
-        });
-        console.log(`✅ Stock actualizado: ${variant_id}`);
-      } else {
-        throw new Error(result.error || 'Error en inventario');
-      }
+//       if (result.success) {
+//         updatedItems.push({
+//           variantId: variant_id,
+//           quantityReduced: quantity,
+//           status: 'success',
+//           response: result
+//         });
+//         console.log(`✅ Stock actualizado: ${variant_id}`);
+//       } else {
+//         throw new Error(result.error || 'Error en inventario');
+//       }
 
-    } catch (error: any) {
-      console.error(`❌ Error procesando item ${item.variant_id}:`, error);
-      failedItems.push({
-        variantId: item.variant_id,
-        error: error.message
-      });
-    }
-  }
+//     } catch (error: any) {
+//       console.error(`❌ Error procesando item ${item.variant_id}:`, error);
+//       failedItems.push({
+//         variantId: item.variant_id,
+//         error: error.message
+//       });
+//     }
+//   }
 
-  return {
-    success: failedItems.length === 0,
-    message: failedItems.length === 0 
-      ? "Inventario actualizado correctamente" 
-      : "Algunos items fallaron",
-    updated: updatedItems,
-    failed: failedItems
-  };
-};
+//   return {
+//     success: failedItems.length === 0,
+//     message: failedItems.length === 0 
+//       ? "Inventario actualizado correctamente" 
+//       : "Algunos items fallaron",
+//     updated: updatedItems,
+//     failed: failedItems
+//   };
+// };
 
 export async function POST(request: NextRequest) {
   try {
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     
     if (items.length > 0) {
       console.log('📦 Procesando actualización de inventario...');
-      inventoryResult = await updateInventory(items);
+      // inventoryResult = await updateInventory(items);
       console.log('✅ Resultado inventario:', inventoryResult);
     }
 

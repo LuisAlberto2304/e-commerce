@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { cartId: string } }
+  context: { params: Promise<{ cartId: string }> }
 ) {
   try {
-    const { cartId } = params;
+    const { cartId } = await context.params;
     const { email, shipping_address } = await request.json();
 
     if (!cartId) {
