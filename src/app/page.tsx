@@ -2,6 +2,7 @@
 import { Button } from '../components/Button';
 import { ProductCard } from '../components/ProductCard';
 import { BannerCarousel } from '../components/Banner';
+import CookieBanner from '../components/CookieBanner';
 import { generateSeoMetadata } from "./lib/seo";
 import Script from 'next/script';
 
@@ -141,6 +142,9 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+
+      {/* Agregar cookie baner al final */}
+      <CookieBanner />
     </>
   );
 }

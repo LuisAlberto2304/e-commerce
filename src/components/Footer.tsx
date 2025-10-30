@@ -11,7 +11,7 @@ export const Footer: React.FC<FooterProps> = ({ text = "© 2025 E-tianguis" }) =
     <footer className={'footer'}>
       <p>{text}</p>
       <p>
-        <Link href="/privacity">Política de privacidad</Link> | <Link href="/useTerms">Términos de uso</Link>
+        <Link href="/privacity">Política de privacidad</Link> | <Link href="/useTerms">Términos de uso</Link> | <Link href='/cookiesPolicity'>Politicas de Cookies</Link>
       </p>
     </footer>
   )
