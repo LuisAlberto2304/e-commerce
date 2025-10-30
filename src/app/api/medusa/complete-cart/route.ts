@@ -7,71 +7,63 @@ interface CartItem {
   variant_id: string;
 }
 
-  const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
-  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
+const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
+const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
 
-// const updateInventory = async (items: any[]) => {
-//   console.log('📦 Actualizando inventario para items:', items);
-  
-//   const updatedItems: any[] = [];
-//   const failedItems: any[] = [];
+const updateInventory = async (items: CartItem[]) => {
+  try {
+    // CORREGIDO: Enviar como objeto con propiedad items
+    const requestBody = {
+      items: items.map((i: CartItem) => ({
+        variantId: i.variant_id,
+        quantity: i.quantity,
+      })),
+    };
 
-//   for (const item of items) {
-//     try {
-//       const { variant_id, quantity } = item;
-//       console.log(`➖ Reduciendo stock: ${variant_id} - ${quantity} unidades`);
+    console.log('📤 Request body para inventario:', JSON.stringify(requestBody, null, 2));
 
-//       // ✅ LLAMA DIRECTAMENTE A MEDUSA, NO A TU ENDPOINT NEXT.JS
-//       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-//       const inventoryResponse = await fetch(`${baseUrl}/api/cart/inventory`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({
-//           variantId: variant_id,
-//           quantity: quantity
-//         }),
-//       });
+    const response = await fetch(`${medusaUrl}/inventory`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-publishable-api-key': publishableKey!,
+      },
+      body: JSON.stringify(requestBody), // CORREGIDO: Enviar el objeto completo
+    });
 
-//       if (!inventoryResponse.ok) {
-//         const errorText = await inventoryResponse.text();
-//         throw new Error(`Error ${inventoryResponse.status}: ${errorText}`);
-//       }
+    // Verificar primero si la respuesta es HTML (error)
+    const responseText = await response.text();
+    
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ La respuesta no es JSON válido:', responseText.substring(0, 200));
+      throw new Error(`El servidor respondió con HTML en lugar de JSON. Posible error 404 o ruta incorrecta.`);
+    }
 
-//       const result = await inventoryResponse.json();
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${result.message || 'Error actualizando inventario'}`);
+    }
 
-//       if (result.success) {
-//         updatedItems.push({
-//           variantId: variant_id,
-//           quantityReduced: quantity,
-//           status: 'success',
-//           response: result
-//         });
-//         console.log(`✅ Stock actualizado: ${variant_id}`);
-//       } else {
-//         throw new Error(result.error || 'Error en inventario');
-//       }
+    return {
+      success: result.success,
+      results: result.results || [],
+      errors: result.errors_detail || [],
+      message: result.message || 'Inventario actualizado'
+    };
+  } catch (err: any) {
+    console.error('❌ Error en updateInventory:', err.message);
+    return { 
+      success: false, 
+      results: [], 
+      errors: [err.message],
+      message: err.message
+    };
+  }
+};
 
-//     } catch (error: any) {
-//       console.error(`❌ Error procesando item ${item.variant_id}:`, error);
-//       failedItems.push({
-//         variantId: item.variant_id,
-//         error: error.message
-//       });
-//     }
-//   }
-
-//   return {
-//     success: failedItems.length === 0,
-//     message: failedItems.length === 0 
-//       ? "Inventario actualizado correctamente" 
-//       : "Algunos items fallaron",
-//     updated: updatedItems,
-//     failed: failedItems
-//   };
-// };
-
+// El resto de tu función POST permanece igual...
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -134,17 +126,22 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ Error actualizando carrito:', updateError.message);
     }
 
-    // 2. ACTUALIZAR INVENTARIO
+    // 2. ACTUALIZAR INVENTARIO - DESCONTAR PRODUCTOS
     let inventoryResult = {
       success: false,
-      updated: [] as any[],
-      failed: [] as any[],
+      results: [] as any[],
+      errors: [] as string[],
       message: 'No se procesaron items'
     };
     
     if (items.length > 0) {
       console.log('📦 Procesando actualización de inventario...');
-      // inventoryResult = await updateInventory(items);
+      console.log('📤 Enviando items al inventario:', items.map((i: CartItem) => ({
+        variantId: i.variant_id,
+        quantity: i.quantity
+      })));
+      
+      inventoryResult = await updateInventory(items);
       console.log('✅ Resultado inventario:', inventoryResult);
     }
 
@@ -168,7 +165,6 @@ export async function POST(request: NextRequest) {
         const completedData = await completeResponse.json();
         console.log('🔍 Respuesta completa de Medusa:', JSON.stringify(completedData, null, 2));
         
-        // ✅ CORREGIDO: Usar completedData.order en lugar de completedData.data
         if (completedData.type === 'order' && completedData.order) {
           orderResult = completedData.order;
           completedViaApi = true;
@@ -204,8 +200,8 @@ export async function POST(request: NextRequest) {
           created_manually: true,
           payment_method,
           inventory_updated: inventoryResult.success,
-          inventory_updates: inventoryResult.updated,
-          inventory_failed: inventoryResult.failed,
+          inventory_results: inventoryResult.results,
+          inventory_errors: inventoryResult.errors,
           note: 'Orden creada manualmente debido a error en API de Medusa'
         }
       };
@@ -225,7 +221,9 @@ export async function POST(request: NextRequest) {
             title: i.title,
             quantity: i.quantity,
             variant_id: i.variant_id
-          }))
+          })),
+          inventory_updated: inventoryResult.success,
+          inventory_errors: inventoryResult.errors
         }
       };
 
@@ -262,8 +260,8 @@ export async function POST(request: NextRequest) {
       order: orderResult,
       completed_via_api: completedViaApi,
       inventory_updated: inventoryResult.success,
-      inventory_updates: inventoryResult.updated,
-      inventory_failed: inventoryResult.failed,
+      inventory_results: inventoryResult.results,
+      inventory_errors: inventoryResult.errors,
       payment_method
     });
 
