@@ -1,14 +1,43 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/userContext";
 import { ShoppingCart, User, LogOut, LogIn, UserPlus } from "lucide-react";
+import ProductSearch from "../components/ProductSearch";
+import algoliasearch from "algoliasearch/lite";
+import { XCircle } from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/app/lib/firebaseClient";
+
+const searchClient = algoliasearch(
+  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID!,
+  process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY!
+);
+const index = searchClient.initIndex("products");
+
 
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { cart } = useCart();
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, customer } = useAuth();
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const loadUserData = async (uid: string) => {
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data(); // contiene role, name, storeName, etc.
+    } else {
+      return null;
+    }
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -50,6 +79,34 @@ export const Header = () => {
     
     return displayName;
   };
+
+    // 🔍 Búsqueda con Algolia
+  const handleSearch = async (q: string) => {
+    setQuery(q);
+    if (!q.trim()) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    try {
+      const { hits } = await index.search(q, { hitsPerPage: 5 });
+      setResults(hits);
+      setShowDropdown(true);
+    } catch (err) {
+      console.error("Error en búsqueda:", err);
+    }
+  };
+
+  // Cerrar dropdown si clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (loading) {
     return (
@@ -108,6 +165,72 @@ export const Header = () => {
           </Link>
         </div>  
 
+        <div className="relative w-full max-w-md" ref={dropdownRef}>
+          {/* 🔍 Campo de búsqueda */}
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Buscar productos..."
+            className="w-full p-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+          />
+
+          {/* ❌ Botón de limpiar búsqueda */}
+          {query && (
+            <button
+              onClick={() => {
+                setQuery("");
+                setResults([]);
+                setShowDropdown(false);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-full shadow-sm transition-all duration-200"
+              aria-label="Limpiar búsqueda"
+            >
+              <XCircle size={18} strokeWidth={2} />
+            </button>
+          )}
+
+          {/* 🔽 Resultados de búsqueda */}
+          {showDropdown && results.length > 0 && (
+            <div className="absolute top-full left-0 w-full bg-white border rounded shadow-lg max-h-80 overflow-y-auto z-50 mt-1 animate-slide-down">
+              {results.map((hit: any) => (
+                <Link
+                  key={hit.objectID}
+                  href={`/products/${hit.objectID}`}
+                  className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowDropdown(false)}
+                >
+                  <img
+                    src={hit.thumbnail || "/images/placeholder-image.png"}
+                    alt={hit.title}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium truncate max-w-[180px] text-gray-800">{hit.title}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* ✨ Animación suave */}
+          <style jsx>{`
+            .animate-slide-down {
+              animation: slideDown 0.2s ease-out forwards;
+            }
+            @keyframes slideDown {
+              0% {
+                opacity: 0;
+                transform: translateY(-10px);
+              }
+              100% {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+          `}</style>
+        </div>
+
         {/* Navegación */}
         <nav className={`header__nav ${isMenuOpen ? 'header__nav--open' : ''}`}>
           {/* Menú de categorías */}
@@ -119,30 +242,35 @@ export const Header = () => {
             >
               Todos los productos
             </Link>
-            <Link 
-              href="/orders" 
-              onClick={closeMenu} 
-              className="header__category-link text-gray-700 hover:text-blue-600 transition-colors font-medium"
+
+            <Link
+              href="/profile/orders"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
             >
-              Historial de compras
+              <span>Mis Órdenes</span>
             </Link>
+
+            
           </div>
+
+          
 
           {/* Sección de usuario */}
           <div className="header__user-section">
             {user ? (
               <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
                 {/* Información del usuario */}
-                <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 w-full sm:w-auto justify-center sm:justify-start">
-                  <User size={18} className="text-blue-600" />
-                  <div className="flex flex-col text-center sm:text-left">
-                    <span className="text-xs text-gray-500 leading-none">Hola,</span>
-                    <span className="text-sm font-medium text-gray-800 leading-none truncate max-w-[150px] sm:max-w-none">
-                      {getDisplayName()}
-                    </span>
+                <Link href="/profile">
+                  <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 w-full sm:w-auto justify-center sm:justify-start">
+                    <User size={18} className="text-blue-600" />
+                    <div className="flex flex-col text-center sm:text-left">
+                      <span className="text-xs text-gray-500 leading-none">Hola,</span>
+                      <span className="text-sm font-medium text-gray-800 leading-none truncate max-w-[150px] sm:max-w-none">
+                        {getDisplayName()}
+                      </span>
+                    </div>
                   </div>
-                </div>
-
+                </Link>
                 {/* Botón de cerrar sesión */}
                 <button
                   onClick={handleLogout}
@@ -166,6 +294,13 @@ export const Header = () => {
                     <span>Registrarse</span>
                   </button>
                 </Link>
+              </div>
+            )}
+           {/* Panel admin */}
+            {customer?.role === "admin" && (
+              <div className="flex gap-4 mt-2">
+                <Link href="/admin/page" className="text-blue-600 font-medium">Panel Admin</Link>
+                <Link href="/admin/orders" className="text-blue-600 font-medium">Órdenes</Link>
               </div>
             )}
           </div>

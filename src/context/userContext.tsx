@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -12,9 +13,12 @@ import {
 import { auth } from '@/firebase/config';
 import { syncMedusaCustomerWithFirebase, getMedusaCustomerWithFirebaseToken } from "@/utils/syncMedusaCustomer";
 import { loginMedusaCustomer } from "@/utils/medusaAuth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from '@/app/lib/firebaseClient';
 
 interface AuthContextType {
   user: User | null;
+  role: string;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -36,6 +40,17 @@ export const useAuth = () => {
 interface AuthProviderProps {
   children: React.ReactNode;
 }
+
+const loadUserData = async (uid: string) => {
+  const docRef = doc(db, "users", uid);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    return docSnap.data(); // contiene role, name, storeName, etc.
+  } else {
+    return null;
+  }
+};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -111,28 +126,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('🔥 Auth state changed:', firebaseUser?.email || 'No user');
-      
+
       setUser(firebaseUser);
-      
+
       if (firebaseUser) {
-        // Sincronizar con Medusa
-        await syncWithMedusa(firebaseUser);
-        
-        // Redirigir si está en login/register
-        if (pathname === '/login' || pathname === '/register') {
-          router.push('/');
+        try {
+          // 🔹 1. Verificar o crear usuario en Firestore
+          const userRef = doc(db, "users", firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+
+          let userData: any;
+          if (userSnap.exists()) {
+            userData = userSnap.data();
+            setCustomer(userData);
+            console.log(`👤 Rol del usuario: ${userData.role}`);
+          } else {
+            // Crear nuevo documento con rol "customer" por defecto
+            userData = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              role: "customer",
+              createdAt: new Date(),
+            };
+            await setDoc(userRef, userData);
+            setCustomer(userData);
+            console.log("🆕 Usuario registrado en Firestore con rol 'customer'");
+          }
+
+          // 🔹 2. Guardar en el estado customer para usar rol
+          setCustomer(userData);
+
+          // 🔹 3. Sincronizar con Medusa
+          await syncWithMedusa(firebaseUser);
+
+          // 🔹 4. Redirigir si está en login/register
+          if (pathname === "/login" || pathname === "/register") {
+            router.push("/");
+          }
+
+        } catch (err) {
+          console.error("❌ Error cargando rol del usuario:", err);
         }
+
       } else {
-        // Limpiar estado al logout
+        // 🔹 5. Limpiar estado al cerrar sesión
         setMedusaToken(null);
         setCustomer(null);
       }
-      
+
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [pathname, router]);
+
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -206,6 +253,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value = {
     user,
+    role: (user as any)?.role || "customer",
     loading,
     signInWithGoogle,
     logout,

@@ -1,21 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
 import { useState } from "react";
 import { auth } from "@/firebase/config";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 
 import { useAuth } from "@/context/userContext";
 import { syncMedusaCustomerWithFirebase } from "@/utils/syncMedusaCustomer";
 
+import { saveUserToFirestore } from "../lib/firestoreHelpers";
+
 export default function RegisterLoginClient() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [nombre, setNombre] = useState("");
   const [apellidoPaterno, setApellidoPaterno] = useState("");
   const [apellidoMaterno, setApellidoMaterno] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("buyer");
+  const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,31 +54,43 @@ export default function RegisterLoginClient() {
 
     setLoading(true);
 
-    try {
-      // 1. Registrar usuario en Firebase Auth
+        try {
+      // 1️⃣ Registrar usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log("Usuario registrado en Firebase:", userCredential.user.email);
+      const user = userCredential.user;
 
-      // 2. Esperar un momento para que Firebase actualice completamente el estado
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 2️⃣ Actualizar perfil de Firebase (nombre completo)
+      const fullName = `${nombre} ${apellidoPaterno} ${apellidoMaterno}`;
+      await updateProfile(user, { displayName: fullName });
 
-      // 3. Sincronizar con Medusa
+      // 3️⃣ Guardar datos en Firestore
+      await saveUserToFirestore(
+        {
+          uid: user.uid,
+          email: user.email!,
+          displayName: user.displayName || "",
+        },
+        {
+          nombre,
+          apellidoPaterno,
+          apellidoMaterno,
+          role: role as "buyer" | "seller" | "admin", // 👈 aquí está el fix
+          storeName: role === "seller" ? storeName : "",
+        }
+      );
+
+
+      // 4️⃣ Sincronizar con Medusa (opcional)
       try {
         await syncMedusaCustomerWithFirebase();
-        console.log("Usuario registrado en Medusa exitosamente");
-      } catch (syncError: any) {
+      } catch (syncError) {
         console.error("Error al sincronizar con Medusa:", syncError);
-        // No bloqueamos el registro si falla la sincronización con Medusa
-        // El usuario puede continuar usando la app
       }
 
-      // 4. Redirigir al home
+      alert("Cuenta creada exitosamente ✅");
       router.push("/");
-      
     } catch (error: any) {
       console.error("Error en registro:", error);
-      
-      // Manejar errores específicos de Firebase
       switch (error.code) {
         case "auth/email-already-in-use":
           setError("Este correo electrónico ya está en uso");
@@ -83,9 +100,6 @@ export default function RegisterLoginClient() {
           break;
         case "auth/weak-password":
           setError("La contraseña es demasiado débil");
-          break;
-        case "auth/operation-not-allowed":
-          setError("El registro con email/password no está habilitado");
           break;
         default:
           setError("Error al registrar usuario. Intenta nuevamente.");
@@ -230,6 +244,22 @@ export default function RegisterLoginClient() {
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
+
+          {/* Nuevo: selección de tipo de usuario */}
+          <div>
+            <label>Tipo de cuenta</label>
+            <select value={role} onChange={(e) => setRole(e.target.value)} className="border rounded p-2 w-full">
+              <option value="buyer">Comprador</option>
+              <option value="seller">Vendedor</option>
+            </select>
+          </div>
+
+          {role === "seller" && (
+            <div>
+              <label>Nombre de la tienda</label>
+              <input value={storeName} onChange={(e) => setStoreName(e.target.value)} className="border rounded p-2 w-full" placeholder="Ej. Mi Tienda Artesanal" />
+            </div>
+          )}
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">

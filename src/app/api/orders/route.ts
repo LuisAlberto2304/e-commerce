@@ -1,36 +1,33 @@
-// app/api/orders/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
+  const email = req.nextUrl.searchParams.get("email");
+  if (!email) {
+    return NextResponse.json({ error: "Falta el email" }, { status: 400 });
+  }
+
+  const medusaBase = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
+  const apiKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
+
   try {
-    const data = await req.json();
-    const { items, total, guest, ...rest } = data;
+    const res = await fetch(`${medusaBase}/admin/orders?expand=items,customer`, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-    if (!items?.length || !total) {
-      return NextResponse.json(
-        { error: "Faltan datos para crear la orden" },
-        { status: 400 }
-      );
-    }
+    const data = await res.json();
 
-    // 🔹 Simulación de "orden creada"
-    const mockOrder = {
-      id: `order_${Math.random().toString(36).slice(2, 10)}`,
-      date: new Date().toISOString(),
-      status: "pending",
-      total,
-      guest,
-      ...rest,
-    };
-
-    console.log("🧾 Orden simulada:", mockOrder);
-
-    return NextResponse.json(mockOrder, { status: 201 });
-  } catch (err) {
-    console.error("Error al crear la orden:", err);
-    return NextResponse.json(
-      { error: "Error al crear la orden" },
-      { status: 500 }
+    // Filtramos solo las órdenes del usuario
+    const userOrders = data.orders?.filter(
+      (order: any) => order.customer?.email === email
     );
+
+    return NextResponse.json({ orders: userOrders });
+  } catch (err: any) {
+    console.error("Error fetching orders:", err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

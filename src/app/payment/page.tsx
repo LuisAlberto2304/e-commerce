@@ -1,12 +1,11 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 const MEDUSA_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/Button";
 import Link from "next/link";
-import { loadStripe } from "@stripe/stripe-js";
+import { loadStripe, PaymentIntent } from "@stripe/stripe-js";
 import {
   Elements,
   CardElement,
@@ -16,6 +15,8 @@ import {
 import PayPalButton from "@/components/PayPalButton";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { saveOrder } from "../lib/orders";
+import { useAuth } from "@/context/userContext";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -30,54 +31,46 @@ function StripeCheckout({ order, totalWithTax, onSuccess }: any) {
 
   const handleStripePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!stripe || !elements) return;
     setIsProcessing(true);
     setError(null);
 
     try {
-      // Crear PaymentIntent desde el backend
+      // 1️⃣ Crear PaymentIntent en backend
       const res = await fetch("/api/stripe/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: Math.round(totalWithTax * 100), // en centavos
+          amount: Math.round(totalWithTax * 100), // centavos
           currency: "mxn",
         }),
       });
-
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Confirmar pago (se abrirá modal 3D Secure si es necesario)
-      const result = await stripe!.confirmCardPayment(data.clientSecret, {
+      // 2️⃣ Confirmar pago con Stripe
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) throw new Error("No se encontró el elemento de tarjeta");
+
+      const result = await stripe.confirmCardPayment(data.clientSecret, {
         payment_method: {
-          card: elements!.getElement(CardElement)!,
+          card: elements.getElement(CardElement)!,
+          billing_details: { email: order.customerEmail || "guest@example.com" },
         },
       });
 
       if (result.error) {
         setError(result.error.message || "Error al procesar el pago");
-
-        localStorage.setItem(
-          "paymentError",
-          JSON.stringify({
-            step: "Pago con Stripe",
-            message: result.error.message || "Error al procesar el pago",
-          })
-        );
-
         router.push("/failure");
-      } else if (result.paymentIntent?.status === "succeeded") {
-        onSuccess();
+        return;
       }
+
+        if (result.paymentIntent?.status === "succeeded") {
+          onSuccess({ paymentIntent: result.paymentIntent }, "stripe");
+        }
     } catch (err: any) {
       setError(err.message);
-      localStorage.setItem(
-        "paymentError",
-        JSON.stringify({
-          step: "Conexión o servidor",
-          message: err.message,
-        })
-      );
+      console.error("Error Stripe:", err);
       router.push("/failure");
     } finally {
       setIsProcessing(false);
@@ -88,9 +81,9 @@ function StripeCheckout({ order, totalWithTax, onSuccess }: any) {
     <form onSubmit={handleStripePayment}>
       <CardElement className="border p-3 rounded-md mb-4" />
       <button
+        type="submit"
         className="bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
-        disabled={isProcessing}
-        onClick={() => {}}
+        disabled={isProcessing || !stripe}
       >
         {isProcessing ? "Procesando..." : "Pagar con tarjeta"}
       </button>
@@ -98,6 +91,7 @@ function StripeCheckout({ order, totalWithTax, onSuccess }: any) {
     </form>
   );
 }
+
 
 export default function PaymentPage() {
   const [order, setOrder] = useState<any>(null);
@@ -107,6 +101,8 @@ export default function PaymentPage() {
   const [estimatedDays, setEstimatedDays] = useState<number>(0);
   const [shippingMethod, setShippingMethod] = useState<string>("Estándar");
   const [iva, setIva] = useState<number>(0);
+  const { user } = useAuth();
+
   
   // Usar el CartContext para sincronización
   const { cart, subtotal, tax, total, shipping, syncWithMedusa, isSyncing, clearCart } = useCart();
@@ -292,17 +288,16 @@ export default function PaymentPage() {
     }
   };
 
-const handleSuccess = async () => {
+const handleSuccess = async (paymentResult: any) => {
   try {
     setIsProcessing(true);
 
-    // 🧠 Recuperar info guardada del checkout
     const paymentPrep = JSON.parse(localStorage.getItem("payment-preparation") || "{}");
     const { customerEmail, shippingAddress, shippingOptionId, items } = paymentPrep;
 
     console.log("💿 Datos cargados desde localStorage:", paymentPrep);
 
-    // 🛒 1. Crear carrito
+    // Crear carrito
     const createCartRes = await fetch("/api/medusa/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -316,7 +311,7 @@ const handleSuccess = async () => {
 
     console.log("🛒 Carrito creado:", cartId);
 
-    // 👤 2. Asociar cliente + dirección
+    // Asociar cliente + dirección
     await fetch(`/api/medusa/cart/${cartId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -328,42 +323,25 @@ const handleSuccess = async () => {
 
     console.log("📦 Dirección asociada al carrito");
 
-    // 🧱 3. Agregar productos
+    // Agregar productos
     await fetch("/api/medusa/cart-item", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cartId,
-        items,
-      }),
+      body: JSON.stringify({ cartId, items }),
     });
 
     console.log("🧱 Productos agregados");
 
-    // 🚚 4. Agregar método de envío
+    // Agregar método de envío
     await fetch(`/api/medusa/cart/${cartId}/shipping`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        option_id: shippingOptionId,
-      }),
+      body: JSON.stringify({ option_id: shippingOptionId }),
     });
 
     console.log("🚚 Método de envío agregado");
 
-    // 💰 5. Crear colección de pago
-    const payColRes = await fetch("/api/medusa/payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cart_id: cartId,
-      }),
-    });
-
-    const payCol = await payColRes.json();
-    console.log("💳 Colección de pago creada:", payCol);
-
-    // ✅ 6. Completar carrito
+    // Completar carrito
     const completeRes = await fetch("/api/medusa/complete-cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -379,19 +357,95 @@ const handleSuccess = async () => {
     const completed = await completeRes.json();
     console.log("✅ Carrito completado:", completed);
 
-    // 🧹 Limpieza y redirección
+    // Calcular total
+    const total =
+      items.reduce(
+        (sum: number, item: any) =>
+          sum + (item.price || 0) * (item.quantity || 1),
+        0
+      ) + shippingCost + iva;
+
+    // Identificadores de pago
+    function cleanObject(obj: any) {
+      return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined)
+      );
+    }
+
+    // 🔹 Detectar el paymentIntentId de Stripe
+    let paymentIntentId;
+
+    if (paymentMethod === "stripe") {
+      paymentIntentId =
+        paymentResult?.paymentIntent?.id ||
+        paymentResult?.payment_intent ||
+        paymentResult?.id ||
+        paymentResult?.intent ||
+        null;
+    }
+
+    const paypalCaptureId =
+      paymentMethod === "paypal"
+        ? paymentResult?.captureId || paymentResult?.orderID || null
+        : null;
+
+    if (paymentMethod === "stripe" && !paymentIntentId) {
+      console.error("❌ No se obtuvo paymentIntentId de Stripe:", paymentResult);
+      return;
+    }
+
+    console.log("💳 Datos de pago:", {
+      paymentMethod,
+      paymentIntentId,
+      paypalCaptureId,
+    });
+    // Guardar en Firebase
+    try {
+      console.log("🧾 Guardando orden en Firestore...");
+
+      // Datos originales
+      const orderData = {
+        userId: user?.uid || "guest",
+        email: customerEmail,
+        items,
+        total,
+        status: "paid",
+        address: shippingAddress,
+        medusaCartId: cartId,
+        shippingMethod: shippingMethod.toLowerCase(),
+        payment_method: paymentMethod,
+        payment_intent_id: paymentIntentId,
+        paypal_capture_id: paypalCaptureId,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Limpiar campos undefined antes de guardar
+      const cleanedOrder = cleanObject(orderData);
+
+      await saveOrder(cleanedOrder);
+
+      console.log("✅ Orden guardada correctamente en Firestore");
+    } catch (error) {
+      console.error("❌ Error guardando en Firebase (detalle completo):", error);
+      throw error; // 🔁 Re-lanza el error real para depuración
+    }
+
+    console.log("🧹 Limpieza localStorage...");
     localStorage.removeItem("currentOrder");
     localStorage.removeItem("payment-preparation");
     localStorage.removeItem("checkout-progress");
 
+    alert("✅ Orden guardada correctamente. (No se redirige para revisión)");
     window.location.href = "/success";
-  } catch (error) {
-    console.error("❌ Error en el flujo Medusa:", error);
-    alert("Error al procesar el pedido");
+  } catch (error: any) {
+    console.error("❌ Error general en handleSuccess:", error);
+    alert("Error al procesar el pedido: " + error.message);
   } finally {
     setIsProcessing(false);
   }
 };
+
+
   
   if (!order) return null;
 
@@ -439,9 +493,9 @@ const handleSuccess = async () => {
               <input
                 type="radio"
                 name="payment"
-                value="card"
-                checked={paymentMethod === "card"}
-                onChange={() => setPaymentMethod("card")}
+                value="stripe"
+                checked={paymentMethod === "stripe"}
+                onChange={() => setPaymentMethod("stripe")}
                 disabled={isSyncing || isProcessing}
               />
               <span>Tarjeta de crédito / débito</span>
@@ -495,7 +549,7 @@ const handleSuccess = async () => {
           </div>
 
           {/* 💳 Stripe integrado */}
-          {paymentMethod === "card" && (
+          {paymentMethod === "stripe" && (
             <div className="mt-6">
               <Elements stripe={stripePromise}>
                 <StripeCheckout
@@ -509,18 +563,41 @@ const handleSuccess = async () => {
 
           {paymentMethod === "paypal" && (
             <div className="mt-6">
-              <PayPalButton
-                amount={totalWithTax}
-                onSuccess={(details) => {
-                  console.log("✅ Pago exitoso con PayPal:", details);
-                  handleSuccess();
-                }}
-                onError={(err) => {
-                  console.error("Error con PayPal:", err);
-                  alert("Hubo un problema al procesar tu pago con PayPal.");
-                }}
-                disabled={isSyncing || isProcessing}
-              />
+             <PayPalButton
+              amount={totalWithTax}
+              onSuccess={async (details: any) => {
+                try {
+                  console.log("Detalles del pago PayPal:", details);
+
+                  // 🧩 Extrae el capture_id directamente desde los detalles
+                  const captureId =
+                    details.purchase_units?.[0]?.payments?.captures?.[0]?.id || details.id;
+
+                  if (!captureId) {
+                    console.error("No se encontró capture_id:", details);
+                    alert("Error: No se pudo obtener el capture_id de PayPal.");
+                    return;
+                  }
+
+                  // 🔹 Envía los datos correctos a tu handleSuccess
+                  await handleSuccess({
+                    captureId,
+                    orderID: details.id, // usa el id del pago como respaldo
+                    payer: details.payer,
+                    status: details.status,
+                  });
+                } catch (error) {
+                  console.error("Error al obtener capture_id:", error);
+                  alert("Hubo un error al procesar tu pago con PayPal.");
+                }
+              }}
+              onError={(err) => {
+                console.error("Error con PayPal:", err);
+                alert("Hubo un problema al procesar tu pago con PayPal.");
+              }}
+              disabled={isSyncing || isProcessing}
+            />
+
             </div>
           )}
 
@@ -594,4 +671,8 @@ const handleSuccess = async () => {
       </div>
     </div>
   );
+}
+
+function handleSuccess(arg0: { paymentIntent: PaymentIntent; }) {
+  throw new Error("Function not implemented.");
 }

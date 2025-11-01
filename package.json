@@ -13,8 +13,11 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
+    "algoliasearch": "^4.25.2",
     "axios": "^1.12.2",
+    "dotenv": "^17.2.3",
     "firebase": "^12.4.0",
+    "firebase-admin": "^13.5.0",
     "firebase-tools": "^14.19.1",
     "framer-motion": "^12.23.22",
     "jsonwebtoken": "^9.0.2",
@@ -26,14 +29,16 @@
     "next-sitemap": "^4.2.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "stripe": "^19.1.0"
+    "react-instantsearch": "^7.17.0",
+    "stripe": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^20",
+    "@types/node": "^20.19.23",
+    "@types/node-fetch": "^2.6.13",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cypress": "^13.13.3",
@@ -45,6 +50,7 @@
     "lint-staged": "^16.1.6",
     "prettier": "^3.6.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

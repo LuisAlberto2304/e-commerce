@@ -74,7 +74,7 @@ const ProductImage = memo(({
       />
     ) : (
       <div 
-        className="flex items-center justify-center bg-gray-100 w-full h-full rounded-lg"
+        className="flex items-center justify-center bg-white w-full h-full rounded-lg"
         role="img"
         aria-label={`${title} - Sin imagen disponible`}
       >

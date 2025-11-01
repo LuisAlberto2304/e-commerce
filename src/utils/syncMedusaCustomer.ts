@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from "@/firebase/config";
 
 export async function syncMedusaCustomerWithFirebase() {

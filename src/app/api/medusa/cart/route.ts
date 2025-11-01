@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/medusa/cart/route.ts - VERSIÓN FINAL
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
