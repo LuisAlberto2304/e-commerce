@@ -117,7 +117,7 @@ const CookieBanner: React.FC = () => {
       )}
 
       {/* Banner principal */}
-      <div className="fixed bottom-0 left-0 right-0 bg-surface border-t-2 border-gray-200 p-5 shadow-lg z-[1000]">
+      <div className="fixed bottom-0 left-0 right-0 bg-surface border-t-2 border-gray-200 p-5 shadow-lg z-[9999]">
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <h3 className="text-lg font-heading font-bold text-text m-0">Gestión de Cookies</h3>
           <p className="text-text-secondary text-sm leading-relaxed m-0">

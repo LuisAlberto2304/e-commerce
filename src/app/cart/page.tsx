@@ -1,63 +1,156 @@
-'use client'
-import { useCart } from "@/context/CartContext";
+"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { db, auth } from "../lib/firebaseClient";
+import { arrayRemove, collection, deleteDoc, doc, getDoc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, subtotal, shipping } = useCart();
+  const [cart, setCart] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Estado para país e IVA
+  // 🔹 Estados para país e IVA
   const [country, setCountry] = useState("MX");
-  const [taxRate, setTaxRate] = useState(0.16); // México por defecto
+  const [taxRate, setTaxRate] = useState(0.16);
   const [tax, setTax] = useState(0);
   const [isDetecting, setIsDetecting] = useState(true);
+  const [shipping, setShipping] = useState(0); // 🚚 Definido para evitar error
 
   const TAX_RATES: Record<string, number> = {
-    MX: 0.16, 
-    PE: 0.18, // (IGV)
-    AR: 0.21, 
-    CL: 0.19, 
-    ES: 0.21, 
+    MX: 0.16,
+    PE: 0.18,
+    AR: 0.21,
+    CL: 0.19,
+    ES: 0.21,
     US: 0.07,
   };
 
-  //Detectar país automáticamente por IP
+  // 🔹 Detectar país automáticamente por IP
   useEffect(() => {
     const fetchCountry = async () => {
-    try {
-      const res = await fetch("/api/location");
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/location");
+        const data = await res.json();
 
-      const countryCode = data.country_code || "MX";
-      console.log("🌎 País detectado:", data.country_name, countryCode);
+        const countryCode = data.country_code || "MX";
+        console.log("🌎 País detectado:", data.country_name, countryCode);
 
-      setCountry(countryCode);
-      setTaxRate(TAX_RATES[countryCode] ?? 0.16);
-    } catch (error) {
-      console.error("Error detectando país:", error);
-      setCountry("MX");
-      setTaxRate(0.16);
-    } finally {
-      setIsDetecting(false);
-    }
-  };
-
+        setCountry(countryCode);
+        setTaxRate(TAX_RATES[countryCode] ?? 0.16);
+      } catch (error) {
+        console.error("Error detectando país:", error);
+        setCountry("MX");
+        setTaxRate(0.16);
+      } finally {
+        setIsDetecting(false);
+      }
+    };
 
     fetchCountry();
   }, []);
 
-  // 🔹 Recalcular impuesto al cambiar subtotal o país
+  // 🔹 Cargar carrito desde Firestore
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // 🔹 Cambiado: ahora apunta a la subcolección del usuario
+    const cartRef = collection(db, "users", user.uid, "cart");
+
+    const unsubscribe = onSnapshot(cartRef, (snapshot) => {
+      const items = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCart(items);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+  // 🔹 Calcular subtotal, IVA y total
+  const subtotal = cart.reduce(
+    (acc, item) => acc + (item.price || 0) * (item.quantity || 1),
+    0
+  );
+
   useEffect(() => {
     setTax(subtotal * taxRate);
   }, [subtotal, taxRate]);
 
-  const handleCountryChange = (value: string) => {
-    setCountry(value);
-    setTaxRate(TAX_RATES[value] ?? 0.16);
+  const grandTotal = subtotal + tax + shipping;
+
+  // 🔹 Eliminar producto del carrito
+  const handleRemove = async (id: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const itemRef = doc(db, "users", user.uid, "cart", id);
+      await deleteDoc(itemRef);
+    } catch (error) {
+      console.error("Error al eliminar producto:", error);
+    }
   };
 
-  const grandTotal = subtotal + tax + shipping;
+  const handleQuantityChange = async (id: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const itemRef = doc(db, "users", user.uid, "cart", id);
+
+      await updateDoc(itemRef, { quantity: newQuantity });
+      console.log("✅ Cantidad actualizada:", newQuantity);
+    } catch (error) {
+      console.error("❌ Error al actualizar cantidad:", error);
+    }
+  };
+
+
+
+  if (loading) {
+    return <p className="text-center py-10">Cargando tu carrito...</p>;
+  }
+
+  
+  async function removeFromCart(productId: string) {
+    const user = auth.currentUser;
+
+    if (!user) {
+      alert("Debes iniciar sesión para modificar tu carrito.");
+      return;
+    }
+
+    try {
+      const cartRef = doc(db, "users", user.uid, "cart", productId);
+      await deleteDoc(cartRef);
+
+      const cartSnap = await getDoc(cartRef);
+
+      if (!cartSnap.exists()) return;
+
+      const cartData = cartSnap.data();
+      const updatedItems = (cartData.items || []).filter(
+        (item: any) => item.id !== productId
+      );
+
+      await updateDoc(cartRef, { items: updatedItems });
+
+      console.log(`🗑️ Producto con ID ${productId} eliminado del carrito`);
+    } catch (error) {
+      console.error("❌ Error al eliminar producto:", error);
+      alert("No se pudo eliminar el producto del carrito.");
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4" data-testid="cart-item">
@@ -102,20 +195,19 @@ export default function CartPage() {
 
                   <div className="flex items-center gap-2 mt-2">
                     <button
-                      onClick={() => updateQuantity(item.variantId!, Math.max(1, item.quantity - 1))}
+                      onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                       className="px-3 py-1 border rounded hover:bg-gray-100"
                     >
                       −
                     </button>
                     <span className="px-3">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.variantId!, item.quantity + 1)}
+                      onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                       className="px-3 py-1 border rounded hover:bg-gray-100"
                     >
                       +
                     </button>
                   </div>
-
                   <button
                     onClick={() => removeFromCart(item.variantId!)}
                     className="text-red-500 text-sm mt-2 hover:underline"

@@ -14,6 +14,9 @@ import Image from "next/image";
 import { CardProps } from "@/components/ProductCardCarousel";
 import { CartItem, useCart } from "@/context/CartContext";
 import axios from "axios";
+import { db, auth } from "@/app/lib/firebaseClient";
+import { doc, setDoc, deleteDoc, getDoc, updateDoc, increment, collection } from "firebase/firestore";
+import { useAuth } from "@/context/userContext";
 
 type Props = { 
   id: string;
@@ -132,6 +135,67 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   // Obtener imágenes del producto (helper)
   const productImages = getProductImages(producto);
   const absoluteSelectedImage = selectedImage ? getAbsoluteImageUrl(selectedImage) : null;
+
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [loadingFav, setLoadingFav] = useState(false);
+
+  const { user } = useAuth(); // tu usuario actual autenticado
+
+  useEffect(() => {
+    if (!user) return;
+
+    const checkFavorite = async () => {
+      const favRef = doc(db, "wishlist", `${user.uid}_${producto.id}`);
+      const docSnap = await getDoc(favRef);
+      if (docSnap.exists()) {
+        setIsFavorite(true);
+      } else {
+        setIsFavorite(false);
+      }
+    };
+
+    checkFavorite();
+  }, [user, producto.id]);
+
+
+
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      alert("Inicia sesión para guardar productos.");
+      return;
+    }
+
+    setLoadingFav(true);
+
+    const favRef = doc(db, "wishlist", `${user.uid}_${producto.id}`);
+
+      const price =
+      producto.price ??
+      producto.variants?.[0]?.prices?.[0]?.amount ??
+      0;
+
+    try {
+      if (isFavorite) {
+        await deleteDoc(favRef);
+        setIsFavorite(false);
+      } else {
+        await setDoc(favRef, {
+          userId: user.uid,
+          productId: producto.id,
+          name: producto.title,
+          image: producto.thumbnail,
+          price,
+          createdAt: new Date(),
+        });
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error("Error al actualizar wishlist:", error);
+    }
+
+    setLoadingFav(false);
+  };
 
   // -------------------------------------------------
   // Reconstruir opciones desde producto + variant.title
@@ -519,59 +583,65 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   };
 
 
-  const handleAddToCart = async  () => {
-  if (!selectedVariant) {
-    alert("Selecciona una variante antes de continuar");
-    return;
-  }
+  const handleAddToCart = async () => {
+    if (!selectedVariant) {
+      alert("Selecciona una variante antes de continuar");
+      return;
+    }
 
-  const isAvailable = await checkInventory(selectedVariant.id, quantity);
+    const isAvailable = await checkInventory(selectedVariant.id, quantity);
 
-  if (!isAvailable) {
-    alert("Lo sentimos, no hay suficiente stock disponible");
-    return;
-  }
+    if (!isAvailable) {
+      alert("Lo sentimos, no hay suficiente stock disponible");
+      return;
+    }
 
-  setAddingToCart(true);
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Debes iniciar sesión para agregar al carrito");
+      return;
+    }
 
-  try {
-    // Crear el objeto CartItem
-    const cartItem: CartItem = {
-      id: producto.id,
-      variantId: selectedVariant.id,
-      title: producto.title,
-      price: getCurrentPrice(), // Usar la función que retorna número
-      image: selectedImage || getAbsoluteImageUrl(productImages[0]?.url) || '/images/placeholder-image.png',
-      variantDescription: Object.entries(selectedOptions)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(' • '),
-      quantity: quantity,
-      selectedOptions: selectedOptions
-    };
+    setAddingToCart(true);
 
-    // Agregar al carrito usando el context
-    addToCart(cartItem);
+    try {
+      const cartItem = {
+        ownerId: user.uid,
+        productId: producto.id,
+        variantId: selectedVariant.id,
+        title: producto.title,
+        price: getCurrentPrice(),
+        image: selectedImage || getAbsoluteImageUrl(productImages[0]?.url) || '/images/placeholder-image.png',
+        variantDescription: Object.entries(selectedOptions)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(' • '),
+        quantity: quantity,
+        selectedOptions: selectedOptions,
+        addedAt: new Date(),
+        status: "active"
+      };
 
-    console.log("🛒 Producto agregado al carrito:", {
-      product: producto.title,
-      variant: selectedVariant.title,
-      quantity: quantity,
-      price: getCurrentPriceFormatted()
-    });
+      const cartRef = collection(db, "users", user.uid, "cart");
+      const itemRef = doc(cartRef, cartItem.variantId);
 
-    // Feedback al usuario
-    alert(`✅ ¡Agregado al carrito!\n${producto.title}\n${Object.entries(selectedOptions).map(([k, v]) => `${k}: ${v}`).join(' • ')}\nCantidad: ${quantity}`);
+      // Verificar si ya existe el mismo producto (para sumar cantidades)
+      const existing = await getDoc(itemRef);
+      if (existing.exists()) {
+        await updateDoc(itemRef, { quantity: increment(quantity), addedAt: new Date() });
+      } else {
+        await setDoc(itemRef, cartItem);
+      }
 
-    // Resetear cantidad
-    setQuantity(1);
-
-  } catch (error) {
-    console.error("❌ Error al agregar al carrito:", error);
-    alert("Error al agregar el producto al carrito");
-  } finally {
-    setAddingToCart(false);
-  }
-};
+      console.log("🛒 Producto agregado al carrito:", cartItem);
+      alert(`✅ ¡Agregado al carrito!\n${producto.title}\n${Object.entries(selectedOptions).map(([k, v]) => `${k}: ${v}`).join(' • ')}\nCantidad: ${quantity}`);
+      setQuantity(1);
+    } catch (error) {
+      console.error("❌ Error al agregar al carrito:", error);
+      alert("Error al agregar el producto al carrito");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   // -------------------------------------------------
   // Debug logs (útiles)
@@ -947,12 +1017,20 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                 )}
               </button>
               
-              <button 
-                className="w-full sm:w-auto flex items-center justify-center gap-2 border-2 border-gray-300 px-6 py-4 rounded-xl text-lg font-medium hover:bg-gray-50 transition hover:border-gray-400"
-                disabled={isOutOfStock}
+              <button
+                onClick={toggleFavorite}
+                disabled={loadingFav || isOutOfStock}
+                className={`w-full sm:w-auto flex items-center justify-center gap-2 border-2 px-6 py-4 rounded-xl text-lg font-medium transition ${
+                  isFavorite
+                    ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
+                    : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                }`}
               >
-                <Heart size={22} />
-                Guardar
+                <Heart
+                  size={22}
+                  className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"}
+                />
+                {isFavorite ? "Guardado" : "Guardar"}
               </button>
             </div>
 

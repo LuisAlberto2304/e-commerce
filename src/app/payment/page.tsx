@@ -17,7 +17,11 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { saveOrder } from "../lib/orders";
 import { useAuth } from "@/context/userContext";
-
+import { 
+  getCartFromFirebase, 
+  clearCartFromFirebase, 
+  calculateCartTotals 
+} from "../lib/firebaseCart";
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
@@ -102,43 +106,61 @@ export default function PaymentPage() {
   const [shippingMethod, setShippingMethod] = useState<string>("Estándar");
   const [iva, setIva] = useState<number>(0);
   const { user } = useAuth();
+  // Agrega esto junto a tus otros useState()
+  const [hasSynced, setHasSynced] = useState(false);
 
   
-  // Usar el CartContext para sincronización
-  const { cart, subtotal, tax, total, shipping, syncWithMedusa, isSyncing, clearCart } = useCart();
-  const [hasSynced, setHasSynced] = useState(false);
-  const [medusaCartId, setMedusaCartId] = useState<string | null>(null);
+  // Nuevos estados para Firebase
+  const [cart, setCart] = useState<any[]>([]);
+  const [cartTotals, setCartTotals] = useState({
+    subtotal: 0,
+    tax: 0,
+    total: 0,
+    shipping: 0
+  });
 
-  // ✅ Sincronizar carrito local con Medusa al cargar
+  
+
+  // ✅ Cargar carrito desde Firebase
   useEffect(() => {
-    const syncCart = async () => {
-      if (!hasSynced && cart.length > 0) {
+    const loadCartData = async () => {
+      if (user?.uid) {
         try {
-          console.log('🔄 Iniciando sincronización con Medusa...');
-          const result = await syncWithMedusa();
+          const cartData = await getCartFromFirebase(user.uid);
+          setCart(cartData.items || []);
           
-          if (result.success) {
-            console.log('✅ Sincronización completada con cartId:', result.cartId);
-          } else {
-            console.warn('⚠️ Sincronización falló:', result.error);
-            // Puedes mostrar un toast o mensaje al usuario si quieres
-            // Pero no interrumpas el flujo
-          }
-          
-          setHasSynced(true);
+          // Calcular totales
+          const totals = calculateCartTotals(cartData.items);
+          setCartTotals(totals);
         } catch (error) {
-          console.error('❌ Error inesperado en sincronización:', error);
-          setHasSynced(true); // Siempre marca como sincronizado para continuar
+          console.error("Error cargando carrito desde Firebase:", error);
         }
-      } else {
-        setHasSynced(true); // Si no hay items o ya está sincronizado
       }
     };
 
-    syncCart();
-  }, [cart, syncWithMedusa, hasSynced]);
+    loadCartData();
+  }, [user]);
 
-  // ✅ Crear carrito en Medusa y preparar la orden
+    // ✅ NUEVO CÓDIGO - sin isSyncing
+    useEffect(() => {
+    const initializeCart = async () => {
+      if (cart.length > 0 && !hasSynced) {
+        try {
+          console.log('🔄 Inicializando carrito desde Firebase...');
+          setHasSynced(true);
+        } catch (error) {
+          console.error('❌ Error inicializando carrito:', error);
+          setHasSynced(true);
+        }
+      } else if (!hasSynced) {
+        setHasSynced(true);
+      }
+    };
+
+    initializeCart();
+  }, [cart, hasSynced]);
+
+  // ✅ Crear carrito en Medusa usando datos de Firebase
   const createMedusaOrder = async () => {
     try {
       // 1. Crear carrito en Medusa
@@ -152,16 +174,14 @@ export default function PaymentPage() {
 
       if (!cartId) throw new Error("No se pudo crear el carrito en Medusa");
 
-      setMedusaCartId(cartId);
-
-      // 2. Agregar productos al carrito de Medusa
+      // 2. Agregar productos al carrito de Medusa desde Firebase
       const cartItemsRes = await fetch("/api/medusa/cart-item", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cartId,
           items: cart.map(item => ({
-            variant_id: item.variantId,
+            variant_id: item.variantId || item.id, // Ajusta según tu estructura
             quantity: item.quantity,
           })),
         }),
@@ -172,8 +192,7 @@ export default function PaymentPage() {
         throw new Error("No se pudieron agregar los productos al carrito de Medusa");
       }
 
-      console.log('✅ Productos agregados al carrito de Medusa');
-
+      console.log('✅ Productos agregados al carrito de Medusa desde Firebase');
       return cartId;
 
     } catch (error) {
@@ -194,11 +213,11 @@ export default function PaymentPage() {
       shippingCost,
       estimatedDays,
       iva,
-      medusaCartId,
+      cartItems: cart, // Guardar items del carrito
     };
 
     localStorage.setItem("payment-progress", JSON.stringify(paymentProgress));
-  }, [order, paymentMethod, shippingMethod, shippingCost, estimatedDays, iva, medusaCartId]);
+  }, [order, paymentMethod, shippingMethod, shippingCost, estimatedDays, iva, cart]);
 
   // ✅ Recuperar progreso del pago si el checkout fue interrumpido
   useEffect(() => {
@@ -213,7 +232,7 @@ export default function PaymentPage() {
         setShippingCost(data.shippingCost || 0);
         setEstimatedDays(data.estimatedDays || 0);
         setIva(data.iva || 0);
-        setMedusaCartId(data.medusaCartId || null);
+        setCart(data.cartItems || []);
 
         console.log("🧩 Pago interrumpido restaurado:", data);
       }
@@ -238,7 +257,7 @@ export default function PaymentPage() {
     }
   }, []);
 
-  // Calcular envío cuando cambie método
+  // Calcular envío cuando cambie método (se mantiene igual)
   const updateShipping = async (method: string) => {
     if (!order?.country) return;
 
@@ -248,7 +267,7 @@ export default function PaymentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           country: order.country,
-          weight: order.items.reduce(
+          weight: cart.reduce(
             (acc: number, i: any) => acc + (i.weight || 0) * i.quantity,
             0
           ),
@@ -264,7 +283,7 @@ export default function PaymentPage() {
       setOrder((prev: any) => ({
         ...prev,
         shipping: data.shippingCost,
-        total: prev.items.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) + data.shippingCost,
+        total: cart.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) + data.shippingCost,
         shippingZone: data.zone,
         shippingMethod: method,
       }));
@@ -278,7 +297,7 @@ export default function PaymentPage() {
           shippingMethod: method,
           shippingZone: data.zone,
           total:
-            order.items.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) +
+            cart.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) +
             data.shippingCost,
         })
       );
@@ -288,185 +307,129 @@ export default function PaymentPage() {
     }
   };
 
-const handleSuccess = async (paymentResult: any) => {
-  try {
-    setIsProcessing(true);
-
-    const paymentPrep = JSON.parse(localStorage.getItem("payment-preparation") || "{}");
-    const { customerEmail, shippingAddress, shippingOptionId, items } = paymentPrep;
-
-    console.log("💿 Datos cargados desde localStorage:", paymentPrep);
-
-    // Crear carrito
-    const createCartRes = await fetch("/api/medusa/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        region_id: process.env.NEXT_PUBLIC_MEDUSA_DEFAULT_REGION,
-      }),
-    });
-    const cartData = await createCartRes.json();
-    const cartId = cartData.cart?.id;
-    if (!cartId) throw new Error("No se pudo crear el carrito");
-
-    console.log("🛒 Carrito creado:", cartId);
-
-    // Asociar cliente + dirección
-    await fetch(`/api/medusa/cart/${cartId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: customerEmail,
-        shipping_address: shippingAddress,
-      }),
-    });
-
-    console.log("📦 Dirección asociada al carrito");
-
-    // Agregar productos
-    await fetch("/api/medusa/cart-item", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cartId, items }),
-    });
-
-    console.log("🧱 Productos agregados");
-
-    // Agregar método de envío
-    await fetch(`/api/medusa/cart/${cartId}/shipping`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ option_id: shippingOptionId }),
-    });
-
-    console.log("🚚 Método de envío agregado");
-
-    // Completar carrito
-    const completeRes = await fetch("/api/medusa/complete-cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cartId,
-        email: customerEmail,
-        shipping_address: shippingAddress,
-        payment_method: "manual",
-        items,
-      }),
-    });
-
-    const completed = await completeRes.json();
-    console.log("✅ Carrito completado:", completed);
-
-    // Calcular total
-    const total =
-      items.reduce(
-        (sum: number, item: any) =>
-          sum + (item.price || 0) * (item.quantity || 1),
-        0
-      ) + shippingCost + iva;
-
-    // Identificadores de pago
-    function cleanObject(obj: any) {
-      return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined)
-      );
-    }
-
-    // 🔹 Detectar el paymentIntentId de Stripe
-    let paymentIntentId;
-
-    if (paymentMethod === "stripe") {
-      paymentIntentId =
-        paymentResult?.paymentIntent?.id ||
-        paymentResult?.payment_intent ||
-        paymentResult?.id ||
-        paymentResult?.intent ||
-        null;
-    }
-
-    const paypalCaptureId =
-      paymentMethod === "paypal"
-        ? paymentResult?.captureId || paymentResult?.orderID || null
-        : null;
-
-    if (paymentMethod === "stripe" && !paymentIntentId) {
-      console.error("❌ No se obtuvo paymentIntentId de Stripe:", paymentResult);
-      return;
-    }
-
-    console.log("💳 Datos de pago:", {
-      paymentMethod,
-      paymentIntentId,
-      paypalCaptureId,
-    });
-    // Guardar en Firebase
+  const handleSuccess = async (paymentResult: any) => {
     try {
-      console.log("🧾 Guardando orden en Firestore...");
+      setIsProcessing(true);
 
-      // Datos originales
-      const orderData = {
-        userId: user?.uid || "guest",
-        email: customerEmail,
-        items,
-        total,
-        status: "paid",
-        address: shippingAddress,
-        medusaCartId: cartId,
-        shippingMethod: shippingMethod.toLowerCase(),
-        payment_method: paymentMethod,
-        payment_intent_id: paymentIntentId,
-        paypal_capture_id: paypalCaptureId,
-        createdAt: new Date().toISOString(),
-      };
+      const paymentPrep = JSON.parse(localStorage.getItem("payment-preparation") || "{}");
+      const { customerEmail, shippingAddress, shippingOptionId } = paymentPrep;
 
-      // Limpiar campos undefined antes de guardar
-      const cleanedOrder = cleanObject(orderData);
+      console.log("💿 Datos cargados desde localStorage:", paymentPrep);
 
-      await saveOrder(cleanedOrder);
+      // Crear carrito en Medusa
+      const cartId = await createMedusaOrder();
 
-      console.log("✅ Orden guardada correctamente en Firestore");
-    } catch (error) {
-      console.error("❌ Error guardando en Firebase (detalle completo):", error);
-      throw error; // 🔁 Re-lanza el error real para depuración
+      // Completar carrito
+      const completeRes = await fetch("/api/medusa/complete-cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cartId,
+          email: customerEmail,
+          shipping_address: shippingAddress,
+          payment_method: "manual",
+          items: cart, // Usar cart de Firebase
+        }),
+      });
+
+      const completed = await completeRes.json();
+      console.log("✅ Carrito completado:", completed);
+
+      // Calcular total usando datos de Firebase
+      const total = cartTotals.total + shippingCost + iva;
+
+      // Identificadores de pago
+      function cleanObject(obj: any) {
+        return Object.fromEntries(
+          Object.entries(obj).filter(([_, v]) => v !== undefined)
+        );
+      }
+
+      // 🔹 Detectar el paymentIntentId de Stripe
+      let paymentIntentId;
+
+      if (paymentMethod === "stripe") {
+        paymentIntentId =
+          paymentResult?.paymentIntent?.id ||
+          paymentResult?.payment_intent ||
+          paymentResult?.id ||
+          paymentResult?.intent ||
+          null;
+      }
+
+      const paypalCaptureId =
+        paymentMethod === "paypal"
+          ? paymentResult?.captureId || paymentResult?.orderID || null
+          : null;
+
+      if (paymentMethod === "stripe" && !paymentIntentId) {
+        console.error("❌ No se obtuvo paymentIntentId de Stripe:", paymentResult);
+        return;
+      }
+
+      // Guardar en Firebase
+      try {
+        console.log("🧾 Guardando orden en Firestore...");
+
+        const orderData = {
+          userId: user?.uid || "guest",
+          email: customerEmail,
+          items: cart,
+          total,
+          status: "paid",
+          address: shippingAddress,
+          medusaCartId: cartId,
+          shippingMethod: shippingMethod.toLowerCase(),
+          payment_method: paymentMethod,
+          payment_intent_id: paymentIntentId,
+          paypal_capture_id: paypalCaptureId,
+          createdAt: new Date().toISOString(),
+        };
+
+        const cleanedOrder = cleanObject(orderData);
+        await saveOrder(cleanedOrder);
+
+        console.log("✅ Orden guardada correctamente en Firestore");
+
+        // Limpiar carrito de Firebase después de la compra exitosa
+        if (user?.uid) {
+          await clearCartFromFirebase(user.uid);
+        }
+
+      } catch (error) {
+        console.error("❌ Error guardando en Firebase:", error);
+        throw error;
+      }
+
+      console.log("🧹 Limpieza localStorage...");
+      localStorage.removeItem("currentOrder");
+      localStorage.removeItem("payment-preparation");
+      localStorage.removeItem("checkout-progress");
+      localStorage.removeItem("payment-progress");
+
+      alert("✅ Orden procesada correctamente");
+      window.location.href = "/success";
+    } catch (error: any) {
+      console.error("❌ Error general en handleSuccess:", error);
+      alert("Error al procesar el pedido: " + error.message);
+    } finally {
+      setIsProcessing(false);
     }
-
-    console.log("🧹 Limpieza localStorage...");
-    localStorage.removeItem("currentOrder");
-    localStorage.removeItem("payment-preparation");
-    localStorage.removeItem("checkout-progress");
-
-    alert("✅ Orden guardada correctamente. (No se redirige para revisión)");
-    window.location.href = "/success";
-  } catch (error: any) {
-    console.error("❌ Error general en handleSuccess:", error);
-    alert("Error al procesar el pedido: " + error.message);
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
 
-  
+
   if (!order) return null;
 
-  // Usar cálculos del CartContext en lugar de recalcular
+  // Usar cálculos de Firebase en lugar del CartContext
   const taxRate = order.taxRate || 0.16;
-  const productTax = subtotal * taxRate;
+  const productTax = cartTotals.subtotal * taxRate;
   const shippingTax = shippingCost * taxRate;
   const totalTax = productTax + shippingTax;
-  const totalWithTax = subtotal + shippingCost + totalTax;
+  const totalWithTax = cartTotals.subtotal + shippingCost + totalTax;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      {/* Estado de sincronización */}
-      {isSyncing && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <p className="text-blue-800">Sincronizando carrito con el inventario...</p>
-          </div>
-        </div>
-      )}
 
       {isProcessing && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
@@ -496,7 +459,7 @@ const handleSuccess = async (paymentResult: any) => {
                 value="stripe"
                 checked={paymentMethod === "stripe"}
                 onChange={() => setPaymentMethod("stripe")}
-                disabled={isSyncing || isProcessing}
+                disabled={isProcessing}
               />
               <span>Tarjeta de crédito / débito</span>
             </label>
@@ -508,7 +471,7 @@ const handleSuccess = async (paymentResult: any) => {
                 value="paypal"
                 checked={paymentMethod === "paypal"}
                 onChange={() => setPaymentMethod("paypal")}
-                disabled={isSyncing || isProcessing}
+                disabled={isProcessing}
               />
               <span>PayPal</span>
             </label>
@@ -520,7 +483,7 @@ const handleSuccess = async (paymentResult: any) => {
                 value="transfer"
                 checked={paymentMethod === "transfer"}
                 onChange={() => setPaymentMethod("transfer")}
-                disabled={isSyncing || isProcessing}
+                disabled={isProcessing}
               />
               <span>Transferencia bancaria</span>
             </label>
@@ -534,7 +497,7 @@ const handleSuccess = async (paymentResult: any) => {
               value={shippingMethod}
               onChange={(e) => updateShipping(e.target.value)}
               className="w-full border rounded-lg p-2"
-              disabled={isSyncing || isProcessing}
+              disabled={isProcessing}
             >
               <option value="">Selecciona un método de envío</option>
               <option value="Estándar">Estándar</option>
@@ -595,7 +558,7 @@ const handleSuccess = async (paymentResult: any) => {
                 console.error("Error con PayPal:", err);
                 alert("Hubo un problema al procesar tu pago con PayPal.");
               }}
-              disabled={isSyncing || isProcessing}
+              disabled={isProcessing}
             />
 
             </div>
@@ -605,7 +568,7 @@ const handleSuccess = async (paymentResult: any) => {
             <div className="mt-6">
               <button
                 onClick={handleSuccess}
-                disabled={isSyncing || isProcessing}
+                disabled={isProcessing}
                 className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isProcessing ? "Procesando..." : "Confirmar Transferencia"}
@@ -644,7 +607,7 @@ const handleSuccess = async (paymentResult: any) => {
           {/* Subtotal (productos + envío) */}
           <p className="flex justify-between text-gray-800">
             <span>Subtotal:</span>
-            <span>${(subtotal + shippingCost).toFixed(2)}</span>
+            <span>${(cartTotals.subtotal + shippingCost).toFixed(2)}</span>
           </p>
 
           <hr className="my-4" />
@@ -676,3 +639,7 @@ const handleSuccess = async (paymentResult: any) => {
 function handleSuccess(arg0: { paymentIntent: PaymentIntent; }) {
   throw new Error("Function not implemented.");
 }
+function setHasSynced(arg0: boolean) {
+  throw new Error("Function not implemented.");
+}
+

@@ -189,15 +189,8 @@ export const ProductCard: React.FC<CardProps> = memo(({
           </p>
 
           <PriceDisplay price={price} originalPrice={originalPrice} />
-
-          <button
-            data-testid="add-to-cart"
-            onClick={handleAddToCart}
-            className="button button--primary w-full transition-colors duration-200 hover:bg-blue-600 active:bg-blue-700"
-            aria-label={`Agregar ${title} al carrito`}
-          >
-            Añadir al carrito
-          </button>
+          
+      
         </div>
 
         {footerText && (

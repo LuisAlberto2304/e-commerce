@@ -241,19 +241,8 @@ export const Header = () => {
               className="header__category-link text-gray-700 hover:text-blue-600 transition-colors font-medium"
             >
               Todos los productos
-            </Link>
-
-            <Link
-              href="/profile/orders"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
-            >
-              <span>Mis Órdenes</span>
-            </Link>
-
-            
+            </Link>  
           </div>
-
-          
 
           {/* Sección de usuario */}
           <div className="header__user-section">

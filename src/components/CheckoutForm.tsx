@@ -6,7 +6,9 @@ import Link from "next/link";
 import AddressForm from "./AddressForm";
 import { Button } from "@/components/Button";
 import { useRouter } from "next/navigation";
-import { useCart } from "@/context/CartContext";
+
+// IMPORT REMOVIDO: ya no usamos contexto del carrito
+// import { useCart } from "@/context/CartContext";
 
 export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   const [isGuest, setIsGuest] = useState(true);
@@ -29,14 +31,15 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     shippingCost: 0,
     estimatedDays: 0,
     zone: "Desconocida",
+    method: "Estándar"
   });
   
   const [tax, setTax] = useState(0);
-  const [taxRate, setTaxRate] = useState(0);
+  const [taxRate, setTaxRate] = useState(0.16);
   const [subtotal, setSubtotal] = useState(0);
-  
-  // Usar el CartContext para obtener los cálculos actualizados
-  const { subtotal: contextSubtotal, tax: contextTax, total: contextTotal } = useCart();
+
+  // --- ADAPTADO: ya no usamos useCart ni sus valores
+  // const { subtotal: contextSubtotal, tax: contextTax, total: contextTotal } = useCart();
 
   // ✅ Recuperar datos si hubo un checkout interrumpido
   useEffect(() => {
@@ -47,14 +50,16 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
       if (data.step === "address") {
         setFormData(data.formData || formData);
         setShipping(data.shipping || 0);
-        setShippingDetails(data.shippingDetails || {});
-        setSubtotal(data.subtotal || 0);
-        setTax(data.tax || 0);
-        setTaxRate(data.taxRate || 0);
+        setShippingDetails(data.shippingDetails || { shippingCost: 0, estimatedDays: 0, zone: "Desconocida", method: "Estándar" });
+        // ADAPTADO: preferir valores guardados, pero no usar contexto
+        setSubtotal(data.subtotal ?? subtotal);
+        setTax(data.tax ?? tax);
+        setTaxRate(data.taxRate ?? taxRate);
         console.log("🧩 Checkout interrumpido restaurado:", data);
       }
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ejecutar solo una vez al montar
 
   // ✅ Cargar datos del carrito al inicializar
   useEffect(() => {
@@ -62,24 +67,31 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     if (savedData) {
       const parsed = JSON.parse(savedData);
 
-      // Usar los valores del contexto o los guardados
-      setSubtotal(contextSubtotal || parsed.subtotal || 0);
-      setTax(contextTax || parsed.tax || 0);
-      setTaxRate(parsed.taxRate || 0.16);
-      setShipping(parsed.shipping || 0);
+      // ADAPTADO: usar los valores guardados en localStorage si existen,
+      // y si no, se calcularán desde cartItems en el efecto siguiente.
+      setSubtotal(parsed.subtotal ?? subtotal);
+      setTax(parsed.tax ?? tax);
+      setTaxRate(parsed.taxRate ?? 0.16);
+      setShipping(parsed.shipping ?? shipping);
 
-      console.log("✅ Datos traídos del carrito:", {
-        contextSubtotal,
-        contextTax,
-        parsed
-      });
+      console.log("✅ Datos traídos del carrito (localStorage):", { parsed });
     } else {
-      // Si no hay datos guardados, usar el contexto
-      setSubtotal(contextSubtotal);
-      setTax(contextTax);
-      setTaxRate(0.16); // IVA por defecto en México
+      // Si no hay datos guardados, los calculamos desde cartItems (ver efecto más abajo)
+      console.log("ℹ️ No hay checkoutData en localStorage — se usarán cartItems");
     }
-  }, [contextSubtotal, contextTax]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // solo al montar
+
+  // --- ADAPTADO: calcular subtotal y tax desde cartItems
+  useEffect(() => {
+    const calcSubtotal = cartItems?.reduce((acc, item) => acc + (item.price || 0) * (item.quantity || 1), 0) ?? 0;
+    setSubtotal(calcSubtotal);
+
+    const calcTax = calcSubtotal * (taxRate ?? 0.16);
+    setTax(calcTax);
+
+    // opcional: si quieres recalcular shipping basado en subtotal, hazlo aquí
+  }, [cartItems, taxRate]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -118,7 +130,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     setShippingDetails(shippingData);
   };
 
-  // ✅ Guardar progreso del checkout automáticamente
+  // ✅ Guardar progreso del checkout automáticamente (mantener)
   useEffect(() => {
     // No guardar si el formulario está vacío
     if (!formData.fullName && !formData.email && !formData.street) return;
@@ -128,8 +140,8 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
       formData,
       shipping,
       shippingDetails,
-      subtotal: contextSubtotal || subtotal,
-      tax: contextTax || tax,
+      subtotal,
+      tax,
       taxRate,
       cartItems,
       timestamp: new Date().toISOString()
@@ -137,28 +149,25 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
 
     localStorage.setItem("checkout-progress", JSON.stringify(checkoutProgress));
     console.log("💾 Progreso guardado:", checkoutProgress);
-  }, [formData, shipping, shippingDetails, contextSubtotal, contextTax, taxRate, cartItems, subtotal, tax]);
+  }, [formData, shipping, shippingDetails, subtotal, tax, taxRate, cartItems]);
 
-  // ✅ Preparar datos para Medusa
+  // ✅ Preparar datos para Medusa (sin cambios)
   const prepareMedusaData = () => {
-    // Separar nombre completo en first_name y last_name
     const nameParts = formData.fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || 'Cliente';
 
-    // Preparar dirección para Medusa
     const shippingAddress = {
       first_name: firstName,
       last_name: lastName,
       address_1: formData.street,
       city: formData.city,
-      country_code: formData.country === 'México' ? 'mx' : 'us', // Por defecto
+      country_code: formData.country || 'MX',
       postal_code: formData.postalCode,
       phone: formData.phone,
-      province: formData.state // Estado/Provincia
+      province: formData.state
     };
 
-    // Preparar datos del cliente
     const customerData = {
       email: formData.email,
       phone: formData.phone,
@@ -174,37 +183,29 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     };
   };
 
-  // ✅ Manejar envío del formulario
+  // ✅ Manejar envío del formulario (NO crear orden en Firebase aquí — mantenemos flujo actual)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // Preparar datos para Medusa
       const medusaData = prepareMedusaData();
       
-      // Calcular totales
-      const finalSubtotal = contextSubtotal || subtotal;
-      const finalTax = contextTax || tax;
+      // Calcular totales usando los valores calculados desde cartItems
+      const finalSubtotal = subtotal;
+      const finalTax = tax;
       const finalShipping = shipping;
       const finalTotal = finalSubtotal + finalTax + finalShipping;
 
-      // Crear objeto de orden completo
+      // Crear objeto de orden completo (LOCAL, para pasar a la pasarela)
       const orderData = {
-        // Información del cliente
         customer: {
           email: formData.email,
           phone: formData.phone,
           fullName: formData.fullName
         },
-        
-        // Dirección de envío
         shippingAddress: medusaData.shippingAddress,
-        
-        // Items del carrito
         items: cartItems,
-        
-        // Totales
         subtotal: finalSubtotal,
         tax: finalTax,
         taxRate: taxRate,
@@ -213,28 +214,22 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
         estimatedDays: shippingDetails.estimatedDays,
         shippingMethod: shippingDetails.method || "Estándar",
         total: finalTotal,
-        
-        // Metadatos para Medusa
         medusaData: {
           shipping_address: medusaData.shippingAddress,
           email: medusaData.email,
           shipping_option_id: medusaData.shippingOptionId
         },
-        
-        // Información de la sesión
         guest: isGuest,
         timestamp: new Date().toISOString()
       };
 
-      console.log("📦 Enviando orden a Medusa:", orderData);
+      console.log("📦 Orden preparada (local):", orderData);
 
-      // Guardar orden completa en localStorage
+      // Guardar orden completa en localStorage como en tu flujo actual
       localStorage.setItem("currentOrder", JSON.stringify(orderData));
-      
-      // Limpiar progreso de checkout (ya tenemos la orden completa)
       localStorage.removeItem("checkout-progress");
-      
-      // Guardar también datos específicos para el pago
+
+      // Preparación para pago (igual que tenías)
       localStorage.setItem("payment-preparation", JSON.stringify({
         customerEmail: formData.email,
         shippingAddress: medusaData.shippingAddress,
@@ -247,8 +242,6 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
       }));
 
       console.log("✅ Orden preparada para pago");
-      
-      // Redirigir a página de pago
       router.push("/payment");
 
     } catch (error) {
@@ -266,9 +259,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
 
   // ✅ Calcular total actual para mostrar en UI
   const calculateCurrentTotal = () => {
-    const currentSubtotal = contextSubtotal || subtotal;
-    const currentTax = contextTax || tax;
-    return currentSubtotal + currentTax + shipping;
+    return subtotal + tax + shipping;
   };
 
   return (
@@ -396,7 +387,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
           <div className="border-t pt-4 space-y-2">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal:</span>
-              <span>${(contextSubtotal || subtotal).toFixed(2)}</span>
+              <span>${subtotal.toFixed(2)}</span>
             </div>
             
             <div className="flex justify-between text-gray-600">
@@ -406,7 +397,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
             
             <div className="flex justify-between text-gray-600">
               <span>IVA ({(taxRate * 100).toFixed(0)}%):</span>
-              <span>${(contextTax || tax).toFixed(2)}</span>
+              <span>${tax.toFixed(2)}</span>
             </div>
             
             <div className="flex justify-between font-bold text-lg text-gray-800 pt-2 border-t">

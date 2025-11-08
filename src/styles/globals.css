@@ -608,7 +608,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 8px;
   border-radius: 12px;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 255);
   border: 1px solid rgba(255, 255, 255, 0.2);
   margin-left: 10px;
 }
@@ -619,7 +619,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 8px;
   border-radius: 12px;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 255);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -630,7 +630,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .header__cart:hover,
 .header__cart-mobile:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.701);
   transform: translateY(-2px);
 }
 
