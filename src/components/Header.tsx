@@ -165,14 +165,24 @@ export const Header = () => {
           </Link>
         </div>  
 
-        <div className="relative w-full max-w-md" ref={dropdownRef}>
-          {/* 🔍 Campo de búsqueda */}
+        {/* 🔍 Barra de búsqueda moderna */}
+      <div className="relative flex-1 max-w-md mx-auto" ref={dropdownRef}>
+        <div className="flex items-center bg-amber-100 border border-brown rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-brown transition-all duration-300">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-5 h-5 text-brown ml-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+          </svg>
           <input
             type="search"
             value={query}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Buscar productos..."
-            className="w-full p-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            className="flex-1 bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none px-3 py-2 rounded-r-2xl"
           />
 
           {/* ❌ Botón de limpiar búsqueda */}
@@ -183,53 +193,56 @@ export const Header = () => {
                 setResults([]);
                 setShowDropdown(false);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-full shadow-sm transition-all duration-200"
+              className="mr-3 text-black hover:text-brown transition-colors"
               aria-label="Limpiar búsqueda"
             >
-              <XCircle size={18} strokeWidth={2} />
+              <XCircle size={20} />
             </button>
           )}
-
-          {/* 🔽 Resultados de búsqueda */}
-          {showDropdown && results.length > 0 && (
-            <div className="absolute top-full left-0 w-full bg-white border rounded shadow-lg max-h-80 overflow-y-auto z-50 mt-1 animate-slide-down">
-              {results.map((hit: any) => (
-                <Link
-                  key={hit.objectID}
-                  href={`/products/${hit.objectID}`}
-                  className="flex items-center gap-2 p-2 hover:bg-gray-50 transition-colors"
-                  onClick={() => setShowDropdown(false)}
-                >
-                  <img
-                    src={hit.thumbnail || "/images/placeholder-image.png"}
-                    alt={hit.title}
-                    className="w-12 h-12 object-cover rounded"
-                  />
-                  <div className="text-sm">
-                    <p className="font-medium truncate max-w-[180px] text-gray-800">{hit.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* ✨ Animación suave */}
-          <style jsx>{`
-            .animate-slide-down {
-              animation: slideDown 0.2s ease-out forwards;
-            }
-            @keyframes slideDown {
-              0% {
-                opacity: 0;
-                transform: translateY(-10px);
-              }
-              100% {
-                opacity: 1;
-                transform: translateY(0);
-              }
-            }
-          `}</style>
         </div>
+
+        {/* 🔽 Resultados de búsqueda */}
+        {showDropdown && results.length > 0 && (
+          <div className="absolute top-full left-0 w-full bg-white border border-brown rounded-xl shadow-lg max-h-80 overflow-y-auto z-50 mt-2 animate-fadeIn backdrop-blur-sm">
+            {results.map((hit: any) => (
+              <Link
+                key={hit.objectID}
+                href={`/products/${hit.objectID}`}
+                className="flex items-center gap-3 p-3 hover:bg-brown/10 transition-all rounded-lg"
+                onClick={() => setShowDropdown(false)}
+              >
+                <img
+                  src={hit.thumbnail || "/images/placeholder-image.png"}
+                  alt={hit.title}
+                  className="w-10 h-10 object-cover rounded-md border border-brown"
+                />
+                <div className="flex flex-col text-sm">
+                  <p className="font-medium text-gray-800 truncate max-w-[180px]">{hit.title}</p>
+                  <p className="text-xs text-gray-500">{hit.category || "Producto"}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* ✨ Animación suave */}
+        <style jsx>{`
+          .animate-fadeIn {
+            animation: fadeIn 0.25s ease-out forwards;
+          }
+          @keyframes fadeIn {
+            0% {
+              opacity: 0;
+              transform: translateY(-5px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+      </div>
+
 
         {/* Navegación */}
         <nav className={`header__nav ${isMenuOpen ? 'header__nav--open' : ''}`}>
@@ -238,7 +251,7 @@ export const Header = () => {
             <Link 
               href="/category" 
               onClick={closeMenu} 
-              className="header__category-link text-gray-700 hover:text-blue-600 transition-colors font-medium"
+              className="header__category-link text-gray-700 hover:text-brown transition-colors font-medium"
             >
               Todos los productos
             </Link>  
@@ -251,7 +264,7 @@ export const Header = () => {
                 {/* Información del usuario */}
                 <Link href="/profile">
                   <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 w-full sm:w-auto justify-center sm:justify-start">
-                    <User size={18} className="text-blue-600" />
+                    <User size={18} className="text-brown" />
                     <div className="flex flex-col text-center sm:text-left">
                       <span className="text-xs text-gray-500 leading-none">Hola,</span>
                       <span className="text-sm font-medium text-gray-800 leading-none truncate max-w-[150px] sm:max-w-none">
@@ -263,7 +276,7 @@ export const Header = () => {
                 {/* Botón de cerrar sesión */}
                 <button
                   onClick={handleLogout}
-                  className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brownfocus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer"
                 >
                   <LogOut size={16} />
                   <span>Salir</span>
@@ -272,13 +285,13 @@ export const Header = () => {
             ) : (
               <div className="header__buttons flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full">
                 <Link href="/login" onClick={closeMenu} className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto px-4 py-2 text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer">
+                  <button className="w-full sm:w-auto px-4 py-2 text-brown bg-white border border-brown rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer">
                     <LogIn size={16} />
                     <span>Entrar</span>
                   </button>
                 </Link>
                 <Link href="/register" onClick={closeMenu} className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer">
+                  <button className="w-full sm:w-auto px-4 py-2 text-white bg-brown border border-brown rounded-lg hover:bg-rosa focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center justify-center gap-2 text-sm font-medium cursor-pointer">
                     <UserPlus size={16} />
                     <span>Registrarse</span>
                   </button>
@@ -288,8 +301,8 @@ export const Header = () => {
            {/* Panel admin */}
             {customer?.role === "admin" && (
               <div className="flex gap-4 mt-2">
-                <Link href="/admin/page" className="text-blue-600 font-medium">Panel Admin</Link>
-                <Link href="/admin/orders" className="text-blue-600 font-medium">Órdenes</Link>
+                <Link href="/admin/page" className="text-brown font-medium">Panel Admin</Link>
+                <Link href="/admin/orders" className="text-brown font-medium">Órdenes</Link>
               </div>
             )}
           </div>

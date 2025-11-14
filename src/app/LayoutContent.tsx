@@ -5,6 +5,8 @@ import { Header } from '../components/Header'
 import { Footer } from '../components/Footer'
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/userContext";
+import { useEffect } from "react";
+import { initFacebookPixel } from "./lib/facebookPixel";
 
 // 🔹 Rutas que no deben mostrar header
 const noHeaderRoutes = ["/login", "/register"];

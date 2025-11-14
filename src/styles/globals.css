@@ -1,18 +1,27 @@
 @import "tailwindcss";
 
+@plugin "tailwindcss-animate";
+
+
+
+@custom-variant dark (&:is(.dark *));
+
 /* -------------------------------------------------------- Seccion de variables -------------------------------------------------------- */
 @theme {
-    --color-primary-500: #3B82F6; 
-  --color-primary-700: #1D4ED8;
+  --color-primary-500: #E5B299; 
+  --color-primary-700: #C19A6B;
 
   --color-secondary-500: #F43F5E; 
   --color-secondary-700: #BE123C;
 
-  --color-bg: #FFFFFF;        
-  --color-surface: #FFFFFF;
+  --color-bg: #F7F3EE;        
+  --color-surface: #F7F3EE;
   --color-surface2: #F8F7FF;
   --color-text: #111827;      
   --color-text-secondary: #4B5563; 
+
+  --color-brown: #C19A6B;
+  --color-rosa: #E5B299;
 
   --color-success: #22C55E;   
   --color-warning: #F59E0B;   
@@ -50,6 +59,37 @@
 
   --color-secondary-500: #FB7185;
   --color-secondary-700: #F43F5E;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 body {
@@ -223,7 +263,7 @@ h1, h2, h3, h4, h5, h6 {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Ocultar scrollbar */
   .products-grid::-webkit-scrollbar {
     display: none;
@@ -232,7 +272,7 @@ h1, h2, h3, h4, h5, h6 {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   /* Cards en móvil - Layout horizontal */
   .card {
     flex-direction: row;
@@ -241,7 +281,7 @@ h1, h2, h3, h4, h5, h6 {
     height: 160px;
     scroll-snap-align: start;
   }
-  
+
   /* Imagen en layout horizontal */
   .card > .relative {
     width: 120px;
@@ -250,7 +290,7 @@ h1, h2, h3, h4, h5, h6 {
     align-self: center;
     margin-left: 10px;
   }
-  
+
   /* Ajustes del card-body para layout horizontal */
   .card-body {
     padding: 18px;
@@ -259,14 +299,14 @@ h1, h2, h3, h4, h5, h6 {
     flex-grow: 1;
     justify-content: space-between;
   }
-  
+
   /* Ajustes de texto para móvil horizontal */
   .card-title {
     font-size: 14px;
     line-height: 1.3;
     margin-bottom: 6px;
   }
-  
+
   .card-description {
     font-size: 12px;
     line-height: 1.2;
@@ -276,33 +316,33 @@ h1, h2, h3, h4, h5, h6 {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  
+
   .card-price {
     font-size: 14px;
     margin-bottom: 8px;
   }
-  
+
   /* Botón más compacto */
   .button--primary {
     padding: 8px 16px;
     font-size: 12px;
     width: 100%;
   }
-  
+
   /* Rating más pequeño */
   .card-body .flex.items-center.space-x-1 {
     margin-bottom: 6px;
   }
-  
+
   .card-body .flex.items-center.space-x-1 svg {
     width: 12px;
     height: 12px;
   }
-  
+
   .card-body .flex.items-center.space-x-1 .text-xs {
     font-size: 10px;
   }
-  
+
   /* Ocultar footer en móvil para ahorrar espacio */
   .card-footer {
     display: none;
@@ -420,15 +460,15 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1.25rem;
   }
-  
+
   .card-body-carousel {
     padding: 12px;
   }
-  
+
   .card-title-carousel {
     font-size: 16px;
   }
-  
+
   .card-description-carousel {
     font-size: 13px;
   }
@@ -441,50 +481,50 @@ h1, h2, h3, h4, h5, h6 {
     gap: 1rem;
     padding: 0.5rem;
   }
-  
+
   .card-carousel {
     min-height: 320px;
   }
-  
+
   .card-body-carousel {
     padding: 10px;
   }
-  
+
   .card-title-carousel {
     font-size: 14px;
     margin-bottom: 8px;
   }
-  
+
   .card-description-carousel {
     font-size: 12px;
     margin-bottom: 10px;
     -webkit-line-clamp: 2;
   }
-  
+
   .card-price-carousel {
     font-size: 14px;
     margin-bottom: 10px;
   }
-  
+
   .button--primary-carousel {
     padding: 10px 16px;
     font-size: 12px;
   }
-  
+
   /* Rating más pequeño en móviles */
   .card-body-carousel .flex.items-center.space-x-1 {
     margin-bottom: 6px;
   }
-  
+
   .card-body-carousel .flex.items-center.space-x-1 svg {
     width: 12px;
     height: 12px;
   }
-  
+
   .card-body-carousel .flex.items-center.space-x-1 .text-xs {
     font-size: 10px;
   }
-  
+
   .card-footer-carousel {
     font-size: 12px;
     padding: 8px 10px;
@@ -497,15 +537,15 @@ h1, h2, h3, h4, h5, h6 {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 0.75rem;
   }
-  
+
   .card-carousel {
     min-height: 280px;
   }
-  
+
   .card-title-carousel {
     font-size: 13px;
   }
-  
+
   .card-description-carousel {
     font-size: 11px;
     -webkit-line-clamp: 2;
@@ -719,25 +759,25 @@ h1, h2, h3, h4, h5, h6 {
     padding: 12px 20px;
     flex-wrap: wrap;
   }
-  
+
   /* Mostrar menú hamburguesa */
   .header__menu-toggle {
     display: flex;
   }
-  
+
   /* Animación hamburguesa a X */
   .header__menu-toggle--open span:nth-child(1) {
     transform: rotate(45deg) translate(6px, 6px);
   }
-  
+
   .header__menu-toggle--open span:nth-child(2) {
     opacity: 0;
   }
-  
+
   .header__menu-toggle--open span:nth-child(3) {
     transform: rotate(-45deg) translate(6px, -6px);
   }
-  
+
   /* Navegación móvil */
   .header__nav {
     display: none;
@@ -752,11 +792,11 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0 20px 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   }
-  
+
   .header__nav--open {
     display: flex;
   }
-  
+
   .header__categories {
     flex-direction: column;
     gap: 0;
@@ -765,57 +805,57 @@ h1, h2, h3, h4, h5, h6 {
     padding-bottom: 15px;
     margin-bottom: 15px;
   }
-  
+
   .header__category-link {
     padding: 12px 0;
     border-radius: 0;
     text-align: left;
     border-bottom: 1px solid rgba(255,255,255,0.1);
   }
-  
+
   .header__category-link:last-child {
     border-bottom: none;
   }
-  
+
   .header__user-section {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
   }
-  
+
   .header__welcome {
     text-align: center;
     margin-bottom: 10px;
     font-size: 13px;
   }
-  
+
   .header__buttons {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   /* Carrito en móvil - ocultar el del nav y mostrar el móvil */
   .header__cart {
     display: none;
   }
-  
+
   .header__cart-mobile {
     display: flex;
     order: -1; /* Lo coloca antes del menú hamburguesa */
     margin-right: 10px;
   }
-  
+
   /* Ajustes de botones en móvil */
   .header__buttons .button {
     width: 100%;
     justify-content: center;
   }
-  
+
   /* Logo más compacto */
   .header__brand h1 {
     font-size: 18px;
   }
-  
+
   .header__brand svg {
     width: 24px;
     height: 24px;
@@ -827,25 +867,25 @@ h1, h2, h3, h4, h5, h6 {
   .header__content {
     padding: 10px 15px;
   }
-  
+
   .header__brand h1 {
     font-size: 16px;
   }
-  
+
   .header__brand svg {
     width: 20px;
     height: 20px;
   }
-  
+
   .header__nav {
     padding: 0 15px 15px;
   }
-  
+
   .header__cart-mobile {
     padding: 6px;
     margin-right: 8px;
   }
-  
+
   .header__cart-badge {
     width: 16px;
     height: 16px;
@@ -859,7 +899,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .footer {
   font-family: 'Poppins', sans-serif;
-  background: var(--color-primary-700);
+  background: var(--color-brown);
   color: white;
   text-align: center;
   padding: 20px 15px;
@@ -907,7 +947,6 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-
 /* -------------------------------------------------------- Estilos para el banner --------------------------------------------------------*/
 .banner {
   @apply relative w-full overflow-hidden rounded-2xl shadow-lg text-white;
@@ -930,7 +969,6 @@ h1, h2, h3, h4, h5, h6 {
     @apply w-72 md:w-96 object-contain drop-shadow-2xl bg-amber-50;
     border-radius: 10%;
   }
-
 
 /* -------------------------------------------------------- Estilos para formulario Login --------------------------------------------------------*/
 .login-page {
@@ -975,11 +1013,6 @@ h1, h2, h3, h4, h5, h6 {
   @apply font-medium text-indigo-600 transition hover:text-indigo-700 hover:underline mb-10 mt-5;
 }
 
-
-
-
-
-
 input[type="search"]::-webkit-search-cancel-button,
 input[type="search"]::-webkit-search-decoration,
 input[type="search"]::-webkit-search-results-button,
@@ -987,5 +1020,87 @@ input[type="search"]::-webkit-search-results-decoration {
   -webkit-appearance: none;
   appearance: none;
   display: none;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 

@@ -22,6 +22,7 @@ import {
   clearCartFromFirebase, 
   calculateCartTotals 
 } from "../lib/firebaseCart";
+import router from "next/router";
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
@@ -108,7 +109,7 @@ export default function PaymentPage() {
   const { user } = useAuth();
   // Agrega esto junto a tus otros useState()
   const [hasSynced, setHasSynced] = useState(false);
-
+  const router = useRouter();
   
   // Nuevos estados para Firebase
   const [cart, setCart] = useState<any[]>([]);
@@ -258,15 +259,28 @@ export default function PaymentPage() {
   }, []);
 
   // Calcular envío cuando cambie método (se mantiene igual)
-  const updateShipping = async (method: string) => {
-    if (!order?.country) return;
-
+  const updateShipping = async (method: string, countryOverride?: string) => {
     try {
+      const savedOrder = JSON.parse(localStorage.getItem("currentOrder") || "{}");
+      const savedAddress = JSON.parse(localStorage.getItem("shippingAddress") || "{}");
+
+      const country =
+        order?.country ||
+        savedOrder?.country ||
+        savedAddress?.country_code ||
+        "México"; // valor por defecto
+
+      if (!country) {
+        console.warn("⚠️ Falta el campo country en la orden.");
+        return;
+      }
+
       const res = await fetch("/api/shipping", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          country: order.country,
+          country,
+          city: order?.city || "Otro",
           weight: cart.reduce(
             (acc: number, i: any) => acc + (i.weight || 0) * i.quantity,
             0
@@ -274,45 +288,55 @@ export default function PaymentPage() {
           method,
         }),
       });
+
+      if (!res.ok) {
+        console.error("❌ Error al calcular envío:", await res.text());
+        return;
+      }
+
       const data = await res.json();
 
+      // ✅ Actualizamos todos los estados sincronizados
       setShippingMethod(method);
       setShippingCost(data.shippingCost);
-      setEstimatedDays(data.estimatedDays);
-
-      setOrder((prev: any) => ({
-        ...prev,
-        shipping: data.shippingCost,
-        total: cart.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) + data.shippingCost,
-        shippingZone: data.zone,
-        shippingMethod: method,
-      }));
-
-      localStorage.setItem(
-        "currentOrder",
-        JSON.stringify({
-          ...order,
-          shipping: data.shippingCost,
-          estimatedDays: data.estimatedDays,
-          shippingMethod: method,
-          shippingZone: data.zone,
-          total:
-            cart.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) +
-            data.shippingCost,
-        })
+      setEstimatedDays(
+        typeof data.estimatedDays === "string"
+          ? parseInt(data.estimatedDays)
+          : data.estimatedDays
       );
 
+      // ✅ Actualizamos la orden de forma consistente
+      const updatedOrder = {
+        ...order,
+        country,
+        shipping: data.shippingCost,
+        estimatedDays:
+          typeof data.estimatedDays === "string"
+            ? parseInt(data.estimatedDays)
+            : data.estimatedDays,
+        shippingMethod: method,
+        shippingZone: data.zone,
+        total:
+          cart.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0) +
+          data.shippingCost,
+      };
+
+      setOrder(updatedOrder);
+      localStorage.setItem("currentOrder", JSON.stringify(updatedOrder));
     } catch (err) {
-      console.error("Error actualizando envío:", err);
+      console.error("❌ Error actualizando envío:", err);
     }
   };
+
 
   const handleSuccess = async (paymentResult: any) => {
     try {
       setIsProcessing(true);
 
       const paymentPrep = JSON.parse(localStorage.getItem("payment-preparation") || "{}");
+      const currentOrder = JSON.parse(localStorage.getItem("currentOrder") || "{}");
       const { customerEmail, shippingAddress, shippingOptionId } = paymentPrep;
+      const { shipping, shippingMethod } = currentOrder; 
 
       console.log("💿 Datos cargados desde localStorage:", paymentPrep);
 
@@ -380,6 +404,7 @@ export default function PaymentPage() {
           address: shippingAddress,
           medusaCartId: cartId,
           shippingMethod: shippingMethod.toLowerCase(),
+          shippingCost: shipping || 0, 
           payment_method: paymentMethod,
           payment_intent_id: paymentIntentId,
           paypal_capture_id: paypalCaptureId,
@@ -408,7 +433,7 @@ export default function PaymentPage() {
       localStorage.removeItem("payment-progress");
 
       alert("✅ Orden procesada correctamente");
-      window.location.href = "/success";
+      router.push("/success");
     } catch (error: any) {
       console.error("❌ Error general en handleSuccess:", error);
       alert("Error al procesar el pedido: " + error.message);
@@ -429,207 +454,312 @@ export default function PaymentPage() {
   const totalWithTax = cartTotals.subtotal + shippingCost + totalTax;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-
-      {isProcessing && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
-            <p className="text-yellow-800">Procesando orden...</p>
-          </div>
-        </div>
-      )}
-
-      <div className="text-4xl font-bold text-center mb-10 hover:text-gray-600">
-        <Link href="/">E-tianguis</Link>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* 💳 Métodos de pago */}
-        <div className="bg-white p-8 shadow-lg rounded-xl">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
-            Método de pago
-          </h2>
-
-          <div className="space-y-4">
-            <label className="flex items-center gap-3 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="payment"
-                value="stripe"
-                checked={paymentMethod === "stripe"}
-                onChange={() => setPaymentMethod("stripe")}
-                disabled={isProcessing}
-              />
-              <span>Tarjeta de crédito / débito</span>
-            </label>
-
-            <label className="flex items-center gap-3 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="payment"
-                value="paypal"
-                checked={paymentMethod === "paypal"}
-                onChange={() => setPaymentMethod("paypal")}
-                disabled={isProcessing}
-              />
-              <span>PayPal</span>
-            </label>
-
-            <label className="flex items-center gap-3 border p-3 rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="payment"
-                value="transfer"
-                checked={paymentMethod === "transfer"}
-                onChange={() => setPaymentMethod("transfer")}
-                disabled={isProcessing}
-              />
-              <span>Transferencia bancaria</span>
-            </label>
-          </div>
-
-          {/* Selector de envío */}
-          <div className="mt-8">
-            <h3 className="font-semibold mb-2">Método de envío</h3>
-            <select
-              data-testid="shippingMethod"
-              value={shippingMethod}
-              onChange={(e) => updateShipping(e.target.value)}
-              className="w-full border rounded-lg p-2"
-              disabled={isProcessing}
-            >
-              <option value="">Selecciona un método de envío</option>
-              <option value="Estándar">Estándar</option>
-              <option value="Exprés">Exprés</option>
-            </select>
-
-            <p className="text-sm text-gray-500 mt-1">
-              {shippingMethod
-                ? `Llegará en ${estimatedDays} días aprox.`
-                : "Selecciona un método de envío para ver el tiempo estimado"}
-            </p>
-          </div>
-
-          {/* 💳 Stripe integrado */}
-          {paymentMethod === "stripe" && (
-            <div className="mt-6">
-              <Elements stripe={stripePromise}>
-                <StripeCheckout
-                  order={order}
-                  totalWithTax={totalWithTax}
-                  onSuccess={handleSuccess}
-                />
-              </Elements>
-            </div>
-          )}
-
-          {paymentMethod === "paypal" && (
-            <div className="mt-6">
-             <PayPalButton
-              amount={totalWithTax}
-              onSuccess={async (details: any) => {
-                try {
-                  console.log("Detalles del pago PayPal:", details);
-
-                  // 🧩 Extrae el capture_id directamente desde los detalles
-                  const captureId =
-                    details.purchase_units?.[0]?.payments?.captures?.[0]?.id || details.id;
-
-                  if (!captureId) {
-                    console.error("No se encontró capture_id:", details);
-                    alert("Error: No se pudo obtener el capture_id de PayPal.");
-                    return;
-                  }
-
-                  // 🔹 Envía los datos correctos a tu handleSuccess
-                  await handleSuccess({
-                    captureId,
-                    orderID: details.id, // usa el id del pago como respaldo
-                    payer: details.payer,
-                    status: details.status,
-                  });
-                } catch (error) {
-                  console.error("Error al obtener capture_id:", error);
-                  alert("Hubo un error al procesar tu pago con PayPal.");
-                }
-              }}
-              onError={(err) => {
-                console.error("Error con PayPal:", err);
-                alert("Hubo un problema al procesar tu pago con PayPal.");
-              }}
-              disabled={isProcessing}
-            />
-
-            </div>
-          )}
-
-          {paymentMethod === "transfer" && (
-            <div className="mt-6">
-              <button
-                onClick={handleSuccess}
-                disabled={isProcessing}
-                className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {isProcessing ? "Procesando..." : "Confirmar Transferencia"}
-              </button>
-            </div>
-          )}
+    <div className="min-h-screen bg-bg py-8 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <Link href="/">
+            <h1 className="text-4xl font-bold text-gray-900 hover:text-blue-600 transition-colors duration-200 cursor-pointer inline-block">
+              E-tianguis
+            </h1>
+          </Link>
         </div>
 
-        {/* 💰 Resumen del pedido */}
-        <div className="bg-white p-8 shadow-lg rounded-xl h-fit">
-          <h2 className="text-xl font-bold mb-4 text-gray-800">Resumen</h2>
+        {isProcessing && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-8 shadow-sm">
+            <div className="flex items-center justify-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600"></div>
+              <p className="text-yellow-800 font-medium">Procesando tu orden...</p>
+            </div>
+          </div>
+        )}
 
-          {cart.map((item: any) => (
-            <div
-              key={item.variantId}
-              className="flex justify-between items-center text-gray-700 mb-2"
-            >
-              <div>
-                <span className="font-medium">{item.title}</span>
-                {item.variantDescription && (
-                  <p className="text-sm text-gray-500">{item.variantDescription}</p>
-                )}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          {/* 💳 Métodos de pago - Lado izquierdo */}
+          <div className="xl:col-span-7">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+              {/* Progress Steps */}
+              <div className="flex items-center justify-center mb-10">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="text-sm font-medium text-green-600 ml-2">Envío</div>
+                </div>
+                <div className="w-16 h-0.5 bg-green-500 mx-4"></div>
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+                    2
+                  </div>
+                  <div className="text-sm font-medium text-blue-600 ml-2">Pago</div>
+                </div>
               </div>
-              <span>
-                {item.quantity} × ${item.price.toFixed(2)}
-              </span>
+
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+                Método de pago
+              </h2>
+              <p className="text-gray-600 text-center mb-8">
+                Selecciona cómo quieres pagar tu pedido
+              </p>
+
+              {/* Métodos de pago */}
+              <div className="space-y-4 mb-8">
+                <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                  paymentMethod === "stripe" 
+                    ? "border-brown bg-blue-50" 
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="stripe"
+                      checked={paymentMethod === "stripe"}
+                      onChange={() => setPaymentMethod("stripe")}
+                      disabled={isProcessing}
+                      className="w-5 h-5 text-blue-600 focus:ring-brown"
+                    />
+                    <div className="w-10 h-6 bg-brown rounded flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <span className="font-medium">Tarjeta de crédito / débito</span>
+                  </div>
+                </label>
+
+                <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                  paymentMethod === "paypal" 
+                    ? "border-brown bg-blue-50" 
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="paypal"
+                      checked={paymentMethod === "paypal"}
+                      onChange={() => setPaymentMethod("paypal")}
+                      disabled={isProcessing}
+                      className="w-5 h-5 text-blue-600 focus:ring-brown"
+                    />
+                    <div className="w-10 h-6 bg-blue-700 rounded flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">Pay</span>
+                    </div>
+                    <span className="font-medium">PayPal</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Selector de envío */}
+              <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  Método de envío
+                </h3>
+                <div className="space-y-3">
+                  <select
+                    data-testid="shippingMethod"
+                    value={shippingMethod}
+                    onChange={(e) => updateShipping(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                              focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                              transition-all duration-200 bg-white"
+                    disabled={isProcessing}
+                  >
+                    <option value="">Selecciona un método de envío</option>
+                    <option value="Estándar">Estándar</option>
+                    <option value="Exprés">Exprés</option>
+                  </select>
+                  <p className="text-sm text-gray-600 mt-2">
+                    {shippingMethod
+                      ? `📦 Llegará en ${estimatedDays} días aprox.`
+                      : "Selecciona un método de envío para ver el tiempo estimado"}
+                  </p>
+                </div>
+              </div>
+
+              {/* 💳 Stripe integrado */}
+              {paymentMethod === "stripe" && (
+                <div className="mt-6">
+                  <Elements stripe={stripePromise}>
+                    <StripeCheckout
+                      order={order}
+                      totalWithTax={totalWithTax}
+                      onSuccess={handleSuccess}
+                    />
+                  </Elements>
+                </div>
+              )}
+
+              {paymentMethod === "paypal" && (
+                <div className="mt-6">
+                  <PayPalButton
+                    amount={totalWithTax}
+                    onSuccess={async (details: any) => {
+                      try {
+                        console.log("Detalles del pago PayPal:", details);
+                        const captureId =
+                          details.purchase_units?.[0]?.payments?.captures?.[0]?.id || details.id;
+
+                        if (!captureId) {
+                          console.error("No se encontró capture_id:", details);
+                          alert("Error: No se pudo obtener el capture_id de PayPal.");
+                          return;
+                        }
+
+                        await handleSuccess({
+                          captureId,
+                          orderID: details.id,
+                          payer: details.payer,
+                          status: details.status,
+                        });
+                      } catch (error) {
+                        console.error("Error al obtener capture_id:", error);
+                        alert("Hubo un error al procesar tu pago con PayPal.");
+                      }
+                    }}
+                    onError={(err) => {
+                      console.error("Error con PayPal:", err);
+                      alert("Hubo un problema al procesar tu pago con PayPal.");
+                    }}
+                    disabled={isProcessing}
+                  />
+                </div>
+              )}
+
+              {paymentMethod === "transfer" && (
+                <div className="mt-6">
+                  <button
+                    onClick={handleSuccess}
+                    disabled={isProcessing}
+                    className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold 
+                             py-4 px-6 rounded-xl hover:from-green-700 hover:to-green-800 transition-all 
+                             duration-200 disabled:opacity-50 disabled:cursor-not-allowed 
+                             shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    {isProcessing ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Procesando...
+                      </div>
+                    ) : (
+                      "Confirmar Transferencia"
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
-          ))}
+          </div>
 
-          {/* Costo de envío */}
-          <p className="flex justify-between text-gray-800 mt-4">
-            <span>Envío ({shippingMethod}):</span>
-            <span>${shippingCost.toFixed(2)}</span>
-          </p>
+          {/* 💰 Resumen del pedido - Lado derecho */}
+          <div className="xl:col-span-5">
+            <div className="sticky top-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* Header del resumen */}
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 text-white">
+                  <h2 className="text-xl font-bold mb-2">Resumen del pedido</h2>
+                  <p className="text-gray-300 text-sm">
+                    {cart.length} {cart.length === 1 ? 'producto' : 'productos'}
+                  </p>
+                </div>
 
-          {/* Subtotal (productos + envío) */}
-          <p className="flex justify-between text-gray-800">
-            <span>Subtotal:</span>
-            <span>${(cartTotals.subtotal + shippingCost).toFixed(2)}</span>
-          </p>
+                {/* Lista de productos */}
+                <div className="p-6 max-h-80 overflow-y-auto">
+                  <div className="space-y-4">
+                    {cart.map((item: any) => (
+                      <div key={item.variantId} className="flex gap-4 group">
+                        <div className="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            width={64}
+                            height={64}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{item.title}</p>
+                          {item.variantDescription && (
+                            <p className="text-sm text-gray-600 mt-1">{item.variantDescription}</p>
+                          )}
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm text-gray-500">Cantidad: {item.quantity}</span>
+                            <span className="font-semibold text-gray-900">
+                              ${(item.price * item.quantity).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-          <hr className="my-4" />
+                {/* Detalles del precio */}
+                <div className="border-t border-gray-100 p-6 space-y-3">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Envío ({shippingMethod || "No seleccionado"}):</span>
+                    <span>${shippingCost.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal:</span>
+                    <span>${(cartTotals.subtotal + shippingCost).toFixed(2)}</span>
+                  </div>
 
-          {/* IVA separado */}
-          <p className="flex justify-between text-gray-800">
-            <span>IVA ({(taxRate * 100).toFixed(0)}%) productos:</span>
-            <span>${productTax.toFixed(2)}</span>
-          </p>
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>IVA productos ({(taxRate * 100).toFixed(0)}%):</span>
+                      <span>${productTax.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>IVA envío ({(taxRate * 100).toFixed(0)}%):</span>
+                      <span>${shippingTax.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-4 border-t border-gray-200">
+                    <span>Total</span>
+                    <span>${totalWithTax.toFixed(2)}</span>
+                  </div>
+                </div>
 
-          <p className="flex justify-between text-gray-800">
-            <span>IVA ({(taxRate * 100).toFixed(0)}%) envío:</span>
-            <span>${shippingTax.toFixed(2)}</span>
-          </p>
-
-          <hr className="my-4" />
-
-          {/* Total final */}
-          <p className="flex justify-between font-bold text-lg text-gray-800 mt-2">
-            <span>Total:</span>
-            <span>${totalWithTax.toFixed(2)}</span>
-          </p>
+                {/* Garantías */}
+                <div className="border-t border-gray-100 p-6 bg-gray-50">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="w-8 h-8 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-600">Pago seguro</p>
+                    </div>
+                    <div>
+                      <div className="w-8 h-8 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-600">Envío rápido</p>
+                    </div>
+                    <div>
+                      <div className="w-8 h-8 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-600">Garantía</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

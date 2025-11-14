@@ -158,46 +158,35 @@ export const ProductCard: React.FC<CardProps> = memo(({
     : description;
 
   return (
-    <Link 
-      href={`/products/${id}`} 
-      className="block w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
-      prefetch={false} // 🔹 Controlar prefetch según necesidad
+    <Link
+      href={`/products/${id}`}
+      className="group block w-full focus:outline-none"
+      prefetch={false}
     >
-      {/* Contenedor principal */}
-      <div className={`card ${className}`}>
-        
-        {/* Imagen optimizada */}
-        <ProductImage 
-          imageUrl={imageUrl} 
-          title={title} 
-          label={label}
-          priority={priority}
-        />
-
-        {/* Contenido */}
-        <div className="card-body">
-          {rating > 0 && (
-            <StarRating rating={rating} reviewCount={reviewCount} />
-          )}
-          
-          <h2 className="card-title line-clamp-2" title={title}>
-            {title}
-          </h2>
-          
-          <p className="card-description text-gray-600" title={description}>
-            {truncatedDescription}
-          </p>
-
-          <PriceDisplay price={price} originalPrice={originalPrice} />
-          
-      
+      <div
+        className={`relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 ${className}`}
+      >
+        {/* Imagen */}
+        <div className="relative overflow-hidden">
+          <ProductImage imageUrl={imageUrl} title={title} label={label} priority={priority} />
+          {/* 🔹 Efecto de overlay al pasar el mouse */}
+          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </div>
 
-        {footerText && (
-          <div className="card-footer text-xs text-gray-500">
-            {footerText}
+        {/* Contenido */}
+        <div className="p-4 flex flex-col justify-between min-h-[200px]">
+          {rating > 0 && <StarRating rating={rating} reviewCount={reviewCount} />}
+
+          <h2 className="text-lg text-center font-semibold text-gray-900 line-clamp-2 mb-1 group-hover:text-brown transition-colors">
+            {title}
+          </h2>
+
+          <p className="text-sm text-gray-600 line-clamp-2 mb-3">{truncatedDescription}</p>
+
+          <div className="flex text-center items-center justify-between mt-auto">
+            <PriceDisplay price={price} originalPrice={originalPrice} />
           </div>
-        )}
+        </div>
       </div>
     </Link>
   );

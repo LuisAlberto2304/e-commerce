@@ -3,7 +3,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { ShoppingCart, Heart, Check, AlertCircle } from "lucide-react";
+import { ShoppingCart, Heart, Check, AlertCircle, Share2 } from "lucide-react";
 import { fetchProductById, fetchCategoryById, fetchProducts } from "@/app/lib/medusaClient";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import StockStatus from "@/components/StockStatus";
@@ -17,6 +17,7 @@ import axios from "axios";
 import { db, auth } from "@/app/lib/firebaseClient";
 import { doc, setDoc, deleteDoc, getDoc, updateDoc, increment, collection } from "firebase/firestore";
 import { useAuth } from "@/context/userContext";
+import { gtagEvent } from "@/app/lib/gtag";
 
 type Props = { 
   id: string;
@@ -140,6 +141,25 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   const [loadingFav, setLoadingFav] = useState(false);
 
   const { user } = useAuth(); // tu usuario actual autenticado
+
+   useEffect(() => {
+    if (producto) {
+      gtagEvent('view_item', {
+        currency: 'MXN',
+        value: producto.price,
+        items: [
+          {
+            item_id: producto.id,
+            item_name: producto.name,
+            price: producto.price,
+            currency: 'MXN',
+            item_category: producto.category || 'Sin categoría',
+          },
+        ],
+      })
+      console.log('GA4 view_item enviado:', producto.name)
+    }
+  }, [producto])
 
   useEffect(() => {
     if (!user) return;
@@ -626,6 +646,23 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 
       // Verificar si ya existe el mismo producto (para sumar cantidades)
       const existing = await getDoc(itemRef);
+
+      gtagEvent('add_to_cart', {
+        currency: 'MXN',
+        value: getCurrentPrice() * quantity,
+        items: [
+          {
+            item_id: producto.id,
+            item_name: producto.title,
+            item_variant: Object.entries(selectedOptions)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join(', '),
+            price: getCurrentPrice(),
+            quantity,
+          },
+        ],
+      });
+
       if (existing.exists()) {
         await updateDoc(itemRef, { quantity: increment(quantity), addedAt: new Date() });
       } else {
@@ -760,249 +797,233 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <Breadcrumbs items={breadcrumbItems} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mt-6">
-        {/* Galería */}
-        <div className="w-full">
-          <div className="relative bg-gray-100 rounded-2xl flex items-center justify-center min-h-[400px]">
-            {productImages.length > 0 && selectedImage ? (
-              <>
-                <div className="w-full aspect-square sm:aspect-[4/3] flex items-center justify-center">
-                  <Image
-                    src={selectedImage}
-                    alt={producto.title}
-                    width={600}
-                    height={600}
-                    className="w-full h-full object-contain rounded-lg"
-                    onError={() => {
-                      console.error("❌ Error cargando imagen:", selectedImage);
-                      setSelectedImage("/images/placeholder-image.png");
-                    }}
-                    onLoad={() => console.log("✅ Imagen cargada correctamente")}
-                  />
-                </div>
-
-                {productImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={handlePrevImage}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-3 rounded-full shadow-md lg:hidden z-10 hover:bg-white transition-colors"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      onClick={handleNextImage}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-3 rounded-full shadow-md lg:hidden z-10 hover:bg-white transition-colors"
-                    >
-                      ›
-                    </button>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="text-gray-400 p-8 text-center">
-                <div>No hay imagen disponible</div>
-                <div className="text-sm mt-2">Debug: {productImages.length} imágenes encontradas</div>
-              </div>
-            )}
-          </div>
-
-          {/* Miniaturas */}
-          {productImages.length > 1 && (
-            <div className="flex gap-3 mt-4 overflow-x-auto pb-2">
-              {productImages.map((img: any, idx: number) => {
-                const absoluteUrl = getAbsoluteImageUrl(img.url);
-                return (
-                  <button
-                    key={img.id || idx}
-                    onClick={() => handleImageChange(img.url)}
-                    className={`flex-shrink-0 border-2 rounded-lg p-1 transition-all duration-200 ${
-                      selectedImage === absoluteUrl 
-                        ? 'border-emerald-500 ring-2 ring-emerald-200' 
-                        : 'border-transparent hover:border-gray-300'
-                    }`}
-                  >
-                    <img
-                      src={absoluteUrl || '/images/placeholder-image.png'}
-                      alt={`${producto.title} - imagen ${idx + 1}`}
-                      className="w-20 h-20 object-contain rounded-lg"
-                      onError={(e) => {
-                        e.currentTarget.src = '/images/placeholder-image.png';
-                      }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Info producto */}
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">{producto.title}</h1>
-            {selectedVariant && selectedVariant.sku && (
-              <p className="text-sm text-gray-500 mt-1">SKU: {selectedVariant.sku}</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <StockStatus quantity={stockQuantity} />
-            {stockQuantity > 0 && stockQuantity <= 10 && (
-              <span className="text-sm text-amber-600 font-medium">
-                ¡Solo {stockQuantity} en stock!
-              </span>
-            )}
-          </div>
-
-          {/* Precios */}
-          <div className="flex items-center gap-3">
-            <span className="text-2xl sm:text-3xl lg:text-4xl text-emerald-600 font-bold">
-              {getCurrentPrice()}
-            </span>
-            {originalPrice && (
-              <>
-                <span className="text-xl text-gray-500 line-through">{originalPrice}</span>
-                <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-medium">
-                  Oferta
-                </span>
-              </>
-            )}
-          </div>
-
-          <p className="text-gray-600 leading-relaxed">
-            {producto.description || 'No hay descripción disponible'}
-          </p>
-
-          {productOptions.length === 0 && (
-            <div className="text-gray-500 italic">
-              No hay variantes configuradas para este producto.
-            </div>
-          )}
-
-          {productOptions.map((option: any, optionIndex: number) => {
-          console.log(`🔍 Renderizando opción ${option.title}:`, {
-            selectedValue: selectedOptions[option.title],
-            values: option.values
-          });
-          
-          return (
-            <div key={`option-${optionIndex}-${option.title}`} className="border-t pt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-lg capitalize">{option.title}</h3>
-                {selectedOptions[option.title] && (
-                  <span className="text-sm text-gray-500">
-                    Seleccionado: <strong>{selectedOptions[option.title]}</strong>
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex flex-wrap gap-3">
-                {option.values.map((value: any, valueIndex: number) => {
-                  const valueStr = typeof value === 'string' ? value : value.value;
-                  const isSelected = selectedOptions[option.title] === valueStr;
-                  
-                  console.log(`   Valor ${valueStr}: seleccionado?`, isSelected);
-
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6">
+        {/* Galería - Estilo Amazon */}
+        <div className="lg:col-span-7">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Miniaturas verticales */}
+            {productImages.length > 1 && (
+              <div className="flex lg:flex-col gap-2 order-2 lg:order-1 overflow-x-auto lg:overflow-visible">
+                {productImages.map((img: any, idx: number) => {
+                  const absoluteUrl = getAbsoluteImageUrl(img.url);
                   return (
                     <button
-                      key={`option-${optionIndex}-value-${valueIndex}-${valueStr}`}
-                      onClick={() => handleOptionChange(option.title, valueStr)}
-                      className={`
-                        relative px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 border-2 min-w-[60px]
-                        ${isSelected 
-                          ? "border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200" 
-                          : "border-gray-200 hover:border-gray-300 bg-white text-gray-700 hover:shadow-md"
-                        }
-                      `}
+                      key={img.id || idx}
+                      onClick={() => handleImageChange(img.url)}
+                      className={`flex-shrink-0 border rounded p-1 transition-colors ${
+                        selectedImage === absoluteUrl 
+                          ? 'border-orange-500' 
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
                     >
-                      {valueStr}
-                      
-                      {isSelected && (
-                        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-1">
-                          <Check size={12} className="text-white" />
-                        </div>
-                      )}
+                      <img
+                        src={absoluteUrl || '/images/placeholder-image.png'}
+                        alt={`${producto.title} - imagen ${idx + 1}`}
+                        className="w-16 h-16 lg:w-20 lg:h-20 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = '/images/placeholder-image.png';
+                        }}
+                      />
                     </button>
                   );
                 })}
               </div>
-            </div>
-          );
-        })}
+            )}
+            
+            {/* Imagen principal */}
+            <div className="flex-1 order-1 lg:order-2">
+              <div className="bg-white border border-gray-200 rounded-lg flex items-center justify-center p-4">
+                {productImages.length > 0 && selectedImage ? (
+                  <div className="relative w-full">
+                    <div className="w-full aspect-square flex items-center justify-center">
+                      <Image
+                        src={selectedImage}
+                        alt={producto.title}
+                        width={500}
+                        height={500}
+                        className="w-full h-full object-contain"
+                        onError={() => {
+                          console.error("❌ Error cargando imagen:", selectedImage);
+                          setSelectedImage("/images/placeholder-image.png");
+                        }}
+                      />
+                    </div>
 
-          {/* Info variante seleccionada */}
-          {selectedVariant && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
-              <div className="flex items-center gap-3">
-                <Check className="text-green-500 flex-shrink-0" size={20} />
-                <div>
-                  <p className="text-green-800 font-semibold">Variante seleccionada</p>
-                  <p className="text-green-600 text-sm mt-1">
-                    {Object.entries(selectedOptions).map(([key, value]) => `${key}: ${value}`).join(" • ")}
-                  </p>
-                  <p className="text-green-600 text-sm mt-1">
-                    Stock: {getVariantStock(selectedVariant)} unidades
-                  </p>
-                </div>
+                    {productImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={handlePrevImage}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white border border-gray-300 p-2 rounded shadow-sm lg:hidden hover:bg-gray-50"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          onClick={handleNextImage}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white border border-gray-300 p-2 rounded shadow-sm lg:hidden hover:bg-gray-50"
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-gray-400 p-8 text-center">
+                    <div>No hay imagen disponible</div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
+        </div>
 
-          {!selectedVariant && selectedOptions && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="text-yellow-500 flex-shrink-0" size={20} />
-                <div>
-                  <p className="text-yellow-800 font-semibold">Combinación no disponible</p>
-                  <p className="text-yellow-600 text-sm mt-1">
-                    Las opciones seleccionadas no están disponibles en stock
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Cantidad y botones */}
-          <div className="border-t pt-6 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <span className="font-semibold text-lg">Cantidad:</span>
-              <div className="flex items-center border border-gray-300 rounded-lg w-full sm:w-40">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-3 text-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={quantity <= 1 || isOutOfStock}
-                >
-                  -
-                </button>
-                <span className="px-4 py-3 min-w-[60px] text-center text-base font-medium">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="px-4 py-3 text-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={quantity >= stockQuantity}
-                >
-                  +
-                </button>
-              </div>
-              
-              {stockQuantity > 0 && (
-                <span className="text-sm text-gray-500">
-                  Máximo: {stockQuantity} unidades
-                </span>
+        {/* Información del producto - Estilo Amazon */}
+        <div className="lg:col-span-5">
+          <div className="space-y-4">
+            {/* Título y SKU */}
+            <div>
+              <h1 className="text-xl lg:text-2xl font-normal text-gray-900 leading-tight">
+                {producto.title}
+              </h1>
+              {selectedVariant && selectedVariant.sku && (
+                <p className="text-sm text-gray-500 mt-1">SKU: {selectedVariant.sku}</p>
               )}
             </div>
 
-            {/* Botones acción */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Precio */}
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl lg:text-3xl text-gray-900">
+                {getCurrentPrice()}
+              </span>
+              {originalPrice && (
+                <span className="text-sm text-gray-500 line-through">{originalPrice}</span>
+              )}
+            </div>
+
+            {/* Estado de stock */}
+            <div className="space-y-2">
+              <StockStatus quantity={stockQuantity} />
+              {stockQuantity > 0 && stockQuantity <= 10 && (
+                <p className="text-sm text-orange-600">
+                  Solo {stockQuantity} en stock - pide pronto.
+                </p>
+              )}
+            </div>
+
+            {/* Descripción */}
+            <div className="text-sm text-gray-900 leading-relaxed">
+              {producto.description || 'No hay descripción disponible'}
+            </div>
+
+            {/* Opciones de variantes */}
+            {productOptions.length === 0 && (
+              <div className="text-sm text-gray-500">
+                No hay variantes configuradas para este producto.
+              </div>
+            )}
+
+            {productOptions.map((option: any, optionIndex: number) => {
+              return (
+                <div key={`option-${optionIndex}-${option.title}`} className="pt-4 border-t">
+                  <div className="mb-3">
+                    <h3 className="font-medium text-gray-900 capitalize">{option.title}</h3>
+                    {selectedOptions[option.title] && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        Seleccionado: <span className="text-gray-700">{selectedOptions[option.title]}</span>
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {option.values.map((value: any, valueIndex: number) => {
+                      const valueStr = typeof value === 'string' ? value : value.value;
+                      const isSelected = selectedOptions[option.title] === valueStr;
+                      
+                      return (
+                        <button
+                          key={`option-${optionIndex}-value-${valueIndex}-${valueStr}`}
+                          onClick={() => handleOptionChange(option.title, valueStr)}
+                          className={`
+                            px-3 py-2 text-sm border rounded transition-colors min-w-[60px]
+                            ${isSelected 
+                              ? "border-orange-500 bg-orange-50" 
+                              : "border-gray-300 hover:border-gray-400 bg-white"
+                            }
+                          `}
+                        >
+                          {valueStr}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Estado de variante */}
+            {selectedVariant && (
+              <div className="bg-green-50 border border-green-200 rounded p-3">
+                <div className="flex items-start gap-2">
+                  <Check className="text-green-600 flex-shrink-0 mt-0.5" size={16} />
+                  <div className="text-sm">
+                    <p className="text-green-800 font-medium">Disponible</p>
+                    <p className="text-green-600 mt-1">
+                      {Object.entries(selectedOptions).map(([key, value]) => `${key}: ${value}`).join(" • ")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!selectedVariant && selectedOptions && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
+                  <div className="text-sm">
+                    <p className="text-yellow-800 font-medium">No disponible</p>
+                    <p className="text-yellow-600 mt-1">
+                      Esta combinación no está disponible
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cantidad */}
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-900">Cantidad:</span>
+                <div className="flex items-center border border-gray-300 rounded">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    disabled={quantity <= 1 || isOutOfStock}
+                  >
+                    -
+                  </button>
+                  <span className="px-3 py-1 min-w-[40px] text-center text-sm border-x border-gray-300">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="px-3 py-1 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    disabled={quantity >= stockQuantity}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="space-y-3">
               <button
                 onClick={handleAddToCart}
                 disabled={isOutOfStock || addingToCart || !selectedVariant}
-                className="flex-1 flex items-center justify-center gap-3 bg-emerald-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                className="w-full bg-orange-500 border border-orange-600 text-white px-4 py-2 rounded text-sm font-normal hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {addingToCart ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b border-white"></div>
                     Agregando...
                   </>
                 ) : isOutOfStock ? (
@@ -1011,54 +1032,56 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                   'Selecciona opciones'
                 ) : (
                   <>
-                    <ShoppingCart size={22} />
-                    Añadir al carrito - {getCurrentPriceFormatted()}
+                    <ShoppingCart size={18} />
+                    Añadir al carrito
                   </>
                 )}
               </button>
               
-              <button
-                onClick={toggleFavorite}
-                disabled={loadingFav || isOutOfStock}
-                className={`w-full sm:w-auto flex items-center justify-center gap-2 border-2 px-6 py-4 rounded-xl text-lg font-medium transition ${
-                  isFavorite
-                    ? "border-red-500 bg-red-50 text-red-600 hover:bg-red-100"
-                    : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                }`}
-              >
-                <Heart
-                  size={22}
-                  className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"}
-                />
-                {isFavorite ? "Guardado" : "Guardar"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={toggleFavorite}
+                  disabled={loadingFav || isOutOfStock}
+                  className={`flex-1 border px-4 py-2 rounded text-sm font-normal transition-colors flex items-center justify-center gap-2 ${
+                    isFavorite
+                      ? "border-red-500 bg-red-50 text-red-700 hover:bg-red-100"
+                      : "border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <Heart
+                    size={16}
+                    className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"}
+                  />
+                  {isFavorite ? "Guardado" : "Guardar"}
+                </button>
+              </div>
             </div>
 
             {isOutOfStock && (
-              <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <AlertCircle size={18} />
-                <span className="text-sm font-medium">
-                  Producto agotado. Puedes guardarlo en tus favoritos para recibir notificaciones.
-                </span>
+              <div className="text-sm text-orange-600 bg-orange-50 border border-orange-200 rounded p-3">
+                <p>Actualmente no disponible.</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Recomendados */}
-      <div className="mt-16">
-        {recommended.length > 0 ? (
-          <ProductCarousel products={recommended} title="También te puede interesar" />
-        ) : (
-          <p className="text-gray-500 text-center">Cargando productos recomendados...</p>
-        )}
-      </div>
+      {/* Sección de detalles adicionales - Versión simplificada */}
+<div className="mt-12 space-y-12">
+  {/* Recomendados */}
+  <div>
+    {recommended.length > 0 ? (
+      <ProductCarousel products={recommended} title="Los clientes que vieron este producto también vieron" />
+    ) : (
+      <p className="text-gray-500 text-center">Cargando productos recomendados...</p>
+    )}
+  </div>
 
-      {/* Reseñas */}
-      <div className="mt-16">
-        <ProductReviews reviews={mockReviews} averageRating={4.2} totalReviews={mockReviews.length} />
-      </div>
+  {/* Reseñas */}
+  <div>
+    <ProductReviews reviews={mockReviews} averageRating={4.2} totalReviews={mockReviews.length} />
+  </div>
+</div>
     </div>
   );
 }

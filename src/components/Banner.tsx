@@ -21,10 +21,12 @@ type CarouselProps = {
 // 🔹 Componente de imagen optimizado CORREGIDO
 const OptimizedBannerImage = memo(({ 
   imageUrl, 
-  title 
+  title,
+  className
 }: { 
   imageUrl: string; 
-  title: string 
+  title: string;
+  className: string
 }) => (
   <div className="flex justify-center md:justify-end">
     <div className="w-80 h-64 md:h-80 overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200/50 relative">
@@ -63,7 +65,7 @@ const CarouselIndicators = memo(({
         aria-label={`Ir al slide ${i + 1}`}
         className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-300 ${
           current === i 
-            ? "bg-blue-600 scale-125" 
+            ? "bg-brown scale-125" 
             : "bg-gray-300 hover:bg-gray-400"
         }`}
       />
@@ -158,28 +160,37 @@ export const BannerCarousel: React.FC<CarouselProps> = memo(({
   const { title, subtitle, buttonText, buttonAction, imageUrl } = items[current];
 
   return (
-    <section 
-      className="relative w-full bg-emerald-400 py-16 overflow-hidden rounded-2xl"
+    <section
+      className="relative mx-auto mt-6 w-[90%] md:w-[70%] bg-white py-20 overflow-hidden rounded-3xl shadow-lg border border-gray-200"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       role="region"
       aria-label="Carrusel de banners"
     >
-      <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center px-6">
-        {/* Contenido de texto */}
-        <div className="space-y-4 text-center md:text-left">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight text-center">
-            {title}
+      {/* Fondo decorativo con blur */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-[-100px] left-[-100px] w-72 h-72 bg-white rounded-full blur-3xl opacity-30 animate-pulse" />
+        <div className="absolute bottom-[-100px] right-[-100px] w-72 h-72 bg-white rounded-full blur-3xl opacity-30 animate-pulse delay-200" />
+      </div>
+
+      <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center px-6 md:px-10">
+        {/* Texto principal */}
+        <div className="space-y-6 text-center md:text-left">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight">
+            <span className="bg-gradient-to-r bg-black bg-clip-text text-transparent">
+              {title}
+            </span>
           </h1>
+
           {subtitle && (
-            <p className="text-lg md:text-xl text-gray-700 max-w-lg mx-auto md:mx-0 text-center leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-600 max-w-md mx-auto md:mx-0 leading-relaxed">
               {subtitle}
             </p>
           )}
+
           {buttonText && (
-            <div className="text-center pt-2">
-              {/* 🔹 SOLUCIÓN: Usar wrapper div en lugar de className en Button */}
-              <div className="transform hover:scale-105 transition-transform duration-200 inline-block">
+            <div className="pt-4">
+              <div className="inline-block transform hover:scale-105 transition-transform duration-200">
                 <Button
                   variant="primary"
                   label={buttonText}
@@ -190,24 +201,33 @@ export const BannerCarousel: React.FC<CarouselProps> = memo(({
           )}
         </div>
 
-        {/* Imagen optimizada */}
+        {/* Imagen con efecto flotante */}
         {imageUrl && (
-          <OptimizedBannerImage imageUrl={imageUrl} title={title} />
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-purple-500/10 blur-3xl opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
+            <OptimizedBannerImage
+              imageUrl={imageUrl}
+              title={title}
+              className="rounded-3xl shadow-xl transform transition-transform duration-700 group-hover:scale-105"
+            />
+          </div>
         )}
       </div>
 
+      {/* Controles del carrusel */}
       {items.length > 1 && (
         <div className="absolute bottom-6 w-full flex flex-col items-center gap-4">
           <CarouselControls onPrev={prev} onNext={next} />
-          <CarouselIndicators 
-            count={items.length} 
-            current={current} 
-            onSelect={goToSlide} 
+          <CarouselIndicators
+            count={items.length}
+            current={current}
+            onSelect={goToSlide}
           />
         </div>
       )}
     </section>
   );
+
 });
 
 BannerCarousel.displayName = 'BannerCarousel';

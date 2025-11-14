@@ -263,157 +263,253 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-8 sm:p-10">
-      <div className="mb-6">
-        <Link href="/cart">
-          <p className="text-blue-500 hover:text-blue-700 cursor-pointer text-sm">
-            ← Regresar al carrito
-          </p>
-        </Link>
-      </div>
-
-      <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-        Finalizar Compra
-      </h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Formulario */}
-        <div>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {isGuest && (
-              <>
-                <div>
-                  <label
-                    htmlFor="fullName"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Nombre completo
-                  </label>
-                  <input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    placeholder="Juan Pérez"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Correo electrónico
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="ejemplo@correo.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="phone"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Teléfono
-                  </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="55 1234 5678"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </>
-            )}
-
-            <AddressForm 
-              formData={formData} 
-              handleChange={handleChange} 
-              onCountryChange={(country: string) => handleCountryChange(country, getTotalWeight())}
-            />
-
-            <div className="text-center">
-              <button
-                data-testid="continue-to-payment"
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Procesando..." : "Continuar al Pago"}
-              </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/cart">
+            <div className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors cursor-pointer group">
+              <svg className="w-5 h-5 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Volver al carrito
             </div>
-          </form>
+          </Link>
         </div>
 
-        {/* Resumen de la orden */}
-        <div className="bg-gray-50 p-6 rounded-lg h-fit">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Resumen de tu orden</h2>
-          
-          {/* Items del carrito */}
-          <div className="space-y-3 mb-4">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="font-medium text-gray-800">{item.title}</p>
-                  {item.variantDescription && (
-                    <p className="text-sm text-gray-600">{item.variantDescription}</p>
-                  )}
-                  <p className="text-sm text-gray-500">Cantidad: {item.quantity}</p>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          {/* Formulario - Lado izquierdo */}
+          <div className="xl:col-span-7">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+              {/* Progress Steps */}
+              <div className="flex items-center justify-center mb-10">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+                    1
+                  </div>
+                  <div className="text-sm font-medium text-blue-600 ml-2">Envío</div>
                 </div>
-                <p className="font-medium text-gray-800">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </p>
+                <div className="w-16 h-0.5 bg-gray-300 mx-4"></div>
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-semibold">
+                    2
+                  </div>
+                  <div className="text-sm font-medium text-gray-500 ml-2">Pago</div>
+                </div>
               </div>
-            ))}
+
+              <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+                Información de envío
+              </h1>
+              <p className="text-gray-600 text-center mb-8">
+                Completa tus datos para finalizar la compra
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {isGuest && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Información personal
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <input
+                            name="fullName"
+                            type="text"
+                            placeholder="Nombre completo"
+                            value={formData.fullName}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                      transition-all duration-200 bg-gray-50 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            name="email"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                      transition-all duration-200 bg-gray-50 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <input
+                        name="phone"
+                        type="tel"
+                        placeholder="Número de teléfono"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                  transition-all duration-200 bg-gray-50 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <AddressForm 
+                  formData={formData} 
+                  handleChange={handleChange} 
+                  onCountryChange={(country: string) => handleCountryChange(country, getTotalWeight())}
+                />
+
+                <div className="pt-4">
+                  <button
+                    data-testid="continue-to-payment"
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold 
+                             py-4 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all 
+                             duration-200 disabled:opacity-50 disabled:cursor-not-allowed 
+                             shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Procesando...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        Continuar al pago
+                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
 
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-            
-            <div className="flex justify-between text-gray-600">
-              <span>Envío:</span>
-              <span>${shipping.toFixed(2)}</span>
-            </div>
-            
-            <div className="flex justify-between text-gray-600">
-              <span>IVA ({(taxRate * 100).toFixed(0)}%):</span>
-              <span>${tax.toFixed(2)}</span>
-            </div>
-            
-            <div className="flex justify-between font-bold text-lg text-gray-800 pt-2 border-t">
-              <span>Total:</span>
-              <span>${calculateCurrentTotal().toFixed(2)}</span>
-            </div>
+          {/* Resumen de la orden - Lado derecho */}
+          <div className="xl:col-span-5">
+            <div className="sticky top-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* Header del resumen */}
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 text-white">
+                  <h2 className="text-xl font-bold mb-2">Resumen de tu pedido</h2>
+                  <p className="text-gray-300 text-sm">
+                    {cartItems.length} {cartItems.length === 1 ? 'producto' : 'productos'}
+                  </p>
+                </div>
 
-            {/* Información de envío */}
-            {shippingDetails.zone !== "Desconocida" && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Envío {shippingDetails.method}:</strong>{" "}
-                  {shippingDetails.estimatedDays} días aprox. • {shippingDetails.zone}
-                </p>
+                {/* Lista de productos */}
+                <div className="p-6 max-h-80 overflow-y-auto">
+                  <div className="space-y-4">
+                    {cartItems.map((item) => (
+                      <div key={item.id} className="flex gap-4 group">
+                        <div className="flex-shrink-0 w-16 h-16 bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            width={64}
+                            height={64}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{item.title}</p>
+                          {item.variantDescription && (
+                            <p className="text-sm text-gray-600 mt-1">{item.variantDescription}</p>
+                          )}
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm text-gray-500">Cantidad: {item.quantity}</span>
+                            <span className="font-semibold text-gray-900">
+                              ${(item.price * item.quantity).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detalles del precio */}
+                <div className="border-t border-gray-100 p-6 space-y-3">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal</span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-gray-600">
+                    <span>Envío</span>
+                    <span className={shipping === 0 ? "text-green-600 font-semibold" : ""}>
+                      {shipping === 0 ? "GRATIS" : `$${shipping.toFixed(2)}`}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between text-gray-600">
+                    <span>IVA ({(taxRate * 100).toFixed(0)}%)</span>
+                    <span>${tax.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t border-gray-200">
+                    <span>Total</span>
+                    <span>${calculateCurrentTotal().toFixed(2)}</span>
+                  </div>
+
+                  {/* Información de envío */}
+                  {shippingDetails.zone !== "Desconocida" && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">
+                            Envío {shippingDetails.method}
+                          </p>
+                          <p className="text-sm text-blue-700 mt-1">
+                            Llega en {shippingDetails.estimatedDays} días • {shippingDetails.zone}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Garantías */}
+                <div className="border-t border-gray-100 p-6 bg-gray-50">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="w-8 h-8 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-600">Pago seguro</p>
+                    </div>
+                    <div>
+                      <div className="w-8 h-8 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-600">Envío rápido</p>
+                    </div>
+                    <div>
+                      <div className="w-8 h-8 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <p className="text-xs text-gray-600">Garantía</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

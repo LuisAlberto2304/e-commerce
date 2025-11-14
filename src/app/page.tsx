@@ -1,3 +1,5 @@
+"use client"
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/inline-script-id */
 import { Button } from '../components/Button';
 import { ProductCard } from '../components/ProductCard';
@@ -5,13 +7,11 @@ import { BannerCarousel } from '../components/Banner';
 import CookieBanner from '../components/CookieBanner';
 import { generateSeoMetadata } from "./lib/seo";
 import Script from 'next/script';
-
-export const metadata = generateSeoMetadata({
-  title: "Principal",
-  description: "Página principal de la plataforma.",
-  slug: "principal",
-  canonicanl: "https://e-tianguis.com",
-});
+import { onAuthStateChanged, getAuth } from "firebase/auth";
+import { Auth } from 'firebase/auth';
+import { useEffect, useState } from "react";
+import { auth } from './lib/firebaseClient';
+import Link from 'next/link';
 
 // 🔹 Datos estructurados para la página principal
 const structuredData = [
@@ -84,6 +84,15 @@ const structuredData = [
 ];
 
 export default function HomePage() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const products = [
     { id: 'PROD1', title: 'Producto 1', description: 'Descripción corta', price: '10', img: 'https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png'},
     { id: 'PROD2', title: 'Producto 2', description: 'Descripción corta', price: '20', img: 'https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png'},
@@ -116,6 +125,28 @@ export default function HomePage() {
       <section>
         <BannerCarousel items={banners} />
 
+        {/* 🔹 Bloque de bienvenida si NO hay sesión */}
+        {!user && (
+          <div className="bg-white text-black p-6 text-center rounded-xl mx-auto mt-6 w-[90%] md:w-[70%] shadow-sm">
+            <h2 className="text-2xl font-semibold mb-2">¡Bienvenido a E-Tianguis!</h2>
+            <p className="mb-4">
+              Crea una cuenta o inicia sesión para disfrutar ofertas personalizadas, guardar tus favoritos y mucho más.
+            </p>
+            <div className="flex justify-center gap-4">
+              <Link href="/login">
+                <button className="bg-brown text-white hover:bg-rosa px-6 py-2 rounded-lg transition">
+                  Iniciar sesión
+                </button>
+              </Link>
+              <Link href="/register">
+                <button className="bg-white border border-brown text-brown hover:bg-rosa hover:text-white px-6 py-2 rounded-lg transition">
+                  Registrarse
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         <h2 className="text-6xl text-center font-heading text-text mb-10 mt-10">
           Productos destacados
         </h2>
@@ -137,6 +168,8 @@ export default function HomePage() {
         </div>
       </section>
 
+      
+
       {/* 🔹 Insertar JSON-LD */}
       <Script
         type="application/ld+json"
@@ -144,7 +177,10 @@ export default function HomePage() {
       />
 
       {/* Agregar cookie baner al final */}
-      <CookieBanner />
+      <CookieBanner 
+        facebookPixelId={process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID}
+        gaMeasurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}
+      />
     </>
   );
 }

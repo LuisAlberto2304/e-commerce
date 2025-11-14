@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import algoliasearch from "algoliasearch/lite";
-import { X } from "lucide-react"; // Ícono moderno
+import { Search, X } from "lucide-react"; // Ícono moderno
 
 const client = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID!,
@@ -31,46 +31,58 @@ export default function ProductSearch() {
     setResults([]);
   };
 
+
   return (
-    <div className="relative w-full max-w-md">
-      <div className="relative">
+    <div className="relative w-full max-w-lg mx-auto">
+      {/* Campo de búsqueda */}
+      <div className="relative group">
+        {/* Icono de lupa */}
+        <Search
+          size={18}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors"
+        />
+
         <input
           type="search"
           value={query}
           onChange={(e) => search(e.target.value)}
           placeholder="Buscar productos..."
-          className="w-full p-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-12 pr-10 py-3 rounded-full bg-gray-100 text-gray-900 placeholder-gray-400
+                    focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none
+                    shadow-sm transition-all duration-200"
         />
 
-        {/* Botón personalizado para limpiar el texto */}
+        {/* Botón para limpiar */}
         {query && (
           <button
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 transition"
             aria-label="Limpiar búsqueda"
+            className="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-gray-600 
+                      rounded-full p-1.5 transition"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         )}
       </div>
 
+      {/* Resultados */}
       {results.length > 0 && (
-        <div className="absolute top-full left-0 w-full bg-white border rounded shadow max-h-80 overflow-y-auto z-50 mt-1">
+        <div className="absolute top-full left-0 w-full mt-2 rounded-2xl backdrop-blur-md bg-white/70 shadow-xl border border-gray-100 overflow-hidden z-50">
           {results.map((hit: any) => (
             <div
               key={hit.objectID}
-              className="p-2 border-b last:border-b-0 flex gap-2 hover:bg-gray-50 cursor-pointer transition"
+              className="flex items-center gap-3 p-3 hover:bg-gray-100/60 cursor-pointer transition"
             >
               {hit.thumbnail && (
                 <img
                   src={hit.thumbnail}
                   alt={hit.title}
-                  className="w-12 h-12 object-cover rounded"
+                  className="w-10 h-10 object-cover rounded-md"
                 />
               )}
-              <div>
-                <p className="font-semibold text-black">{hit.title}</p>
-                <p className="text-sm text-gray-700">{hit.description}</p>
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-gray-900">{hit.title}</p>
+                <p className="text-xs text-gray-500 line-clamp-1">{hit.description}</p>
               </div>
             </div>
           ))}
@@ -78,4 +90,5 @@ export default function ProductSearch() {
       )}
     </div>
   );
+
 }

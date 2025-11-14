@@ -6,6 +6,8 @@ import { db, auth } from "../lib/firebaseClient";
 import { collection, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
+import { gtagEvent } from "../lib/gtag"; 
+
 export default function CheckoutPage() {
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,54 @@ export default function CheckoutPage() {
     return () => unsubscribe();
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const cartRef = collection(db, "users", userId, "cart");
+
+    const unsubscribe = onSnapshot(
+      cartRef,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setCart(items);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("❌ Error obteniendo carrito:", error);
+        setCart([]);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!loading && cart.length > 0) {
+      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      gtagEvent("begin_checkout", {
+        currency: "MXN",
+        value: total,
+        items: cart.map((item) => ({
+          item_id: item.productId,
+          item_name: item.title,
+          item_variant: item.variantDescription || "",
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      });
+
+      console.log("📊 GA4 Event: begin_checkout enviado con", cart.length, "productos");
+    }
+  }, [loading, cart]);
+
   // 🔹 Estados visuales
   if (loading) {
     return (
@@ -85,7 +135,7 @@ export default function CheckoutPage() {
 
   // 🔹 Enviar carrito al formulario
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white p-6">
+    <div className="min-h-screen flex items-center justify-center bg-bg p-6">
       <div className="flex justify-center w-full">
         <CheckoutForm cartItems={cart} />
       </div>
