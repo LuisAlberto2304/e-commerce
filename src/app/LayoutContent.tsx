@@ -7,6 +7,7 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/userContext";
 import { useEffect } from "react";
 import { initFacebookPixel } from "./lib/facebookPixel";
+export const revalidate = 60; // o 120
 
 // 🔹 Rutas que no deben mostrar header
 const noHeaderRoutes = ["/login", "/register"];

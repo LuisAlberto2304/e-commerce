@@ -18,13 +18,15 @@ import { db } from '@/app/lib/firebaseClient';
 
 interface AuthContextType {
   user: User | null;
-  role: string;
+  role: string; // Cambiar a role para consistencia
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   medusaToken: string | null;
   customer: any | null;
   loginMedusa: (email: string, password: string) => Promise<string>;
+  // Añadir estas propiedades para compatibilidad
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,8 +59,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [medusaToken, setMedusaToken] = useState<string | null>(null);
   const [customer, setCustomer] = useState<any | null>(null);
+  const [userRole, setUserRole] = useState<string>("customer"); // Estado separado para el rol
   const router = useRouter();
   const pathname = usePathname();
+
+  // Calcular si es admin basado en el rol
+  const isAdmin = userRole === "admin";
 
   // Cargar token desde localStorage al iniciar
   useEffect(() => {
@@ -72,7 +78,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     if (savedCustomer) {
       try {
-        setCustomer(JSON.parse(savedCustomer));
+        const customerData = JSON.parse(savedCustomer);
+        setCustomer(customerData);
+        // También establecer el rol desde el customer guardado
+        if (customerData.role) {
+          setUserRole(customerData.role);
+        }
       } catch (e) {
         console.error('Error parsing saved customer:', e);
       }
@@ -139,6 +150,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (userSnap.exists()) {
             userData = userSnap.data();
             setCustomer(userData);
+            // Establecer el rol desde Firestore
+            setUserRole(userData.role || "customer");
             console.log(`👤 Rol del usuario: ${userData.role}`);
           } else {
             // Crear nuevo documento con rol "customer" por defecto
@@ -150,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             };
             await setDoc(userRef, userData);
             setCustomer(userData);
+            setUserRole("customer"); // Establecer rol por defecto
             console.log("🆕 Usuario registrado en Firestore con rol 'customer'");
           }
 
@@ -161,7 +175,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           // 🔹 4. Redirigir si está en login/register
           if (pathname === "/login" || pathname === "/register") {
-            router.push("/");
+            // Redirigir a admin si es administrador, sino al home
+            if (userData.role === "admin") {
+              router.push("/admin");
+            } else {
+              router.push("/");
+            }
           }
 
         } catch (err) {
@@ -172,6 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 🔹 5. Limpiar estado al cerrar sesión
         setMedusaToken(null);
         setCustomer(null);
+        setUserRole("customer"); // Resetear a customer
       }
 
       setLoading(false);
@@ -179,7 +199,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => unsubscribe();
   }, [pathname, router]);
-
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -194,7 +213,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Esperar a que onAuthStateChanged maneje la sincronización
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      router.push('/');
+      // La redirección se maneja en onAuthStateChanged
       
     } catch (error: any) {
       console.error('❌ Error signing in with Google:', error);
@@ -217,6 +236,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await signOut(auth);
       console.log('✅ Usuario cerró sesión exitosamente');
+      // Limpiar estados locales
+      setMedusaToken(null);
+      setCustomer(null);
+      setUserRole("customer");
       router.push('/login');
     } catch (error) {
       console.error('❌ Error signing out:', error);
@@ -247,19 +270,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       hasUser: !!user,
       userEmail: user?.email,
       hasMedusaToken: !!medusaToken,
-      hasCustomer: !!customer
+      hasCustomer: !!customer,
+      userRole: userRole,
+      isAdmin: isAdmin
     });
-  }, [user, medusaToken, customer]);
+  }, [user, medusaToken, customer, userRole, isAdmin]);
 
   const value = {
     user,
-    role: (user as any)?.role || "customer",
+    role: userRole, // Usar el estado separado del rol
     loading,
     signInWithGoogle,
     logout,
     medusaToken,
     customer,
     loginMedusa,
+    isAdmin, // Añadir propiedad isAdmin
   };
 
   return (

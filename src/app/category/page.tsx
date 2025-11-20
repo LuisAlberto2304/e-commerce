@@ -3,6 +3,7 @@ import { generateSeoMetadata } from "../lib/seo";
 import CategoryPageClient from "./CategoryPageClient";
 import Script from "next/script";
 
+
 // 🔹 Metadata estática
 export const metadata = generateSeoMetadata({
   title: "Categorías",

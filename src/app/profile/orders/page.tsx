@@ -110,25 +110,32 @@ const OrdersPage = () => {
 
   const handleSubmitReturn = async () => {
     if (!selectedOrder || !returnReason.trim()) return;
+
     try {
       setSubmitting(true);
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // pequeña animación simulada
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // Animación
+    
       await addDoc(collection(db, 'returns'), {
-        userId: user?.uid,
+        userId: user?.uid,                    
+        userEmail: user?.email || null,        
+        userName: user?.displayName || null,    
         orderId: selectedOrder.id,
         reason: returnReason,
         status: 'pending',
         createdAt: new Date().toISOString(),
       });
+
       setSuccess(true);
       setSubmitting(false);
       setTimeout(() => setShowModal(false), 2000);
+
     } catch (error) {
       console.error('Error creando devolución:', error);
       setSubmitting(false);
       alert('❌ No se pudo enviar la solicitud.');
     }
   };
+
 
   const getStatusBadge = (status: string) => {
     const base =

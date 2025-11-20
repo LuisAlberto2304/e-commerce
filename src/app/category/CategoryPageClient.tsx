@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import FiltersSidebar from "@/components/FiltersSidebar";
 import ProductGridWithFilters from "@/components/ProductGridWithFilters";
+export const revalidate = 120; // o 120
 
 type Filters = { q?: string; color?: string; size?: string; category?: string };
 

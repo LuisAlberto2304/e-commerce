@@ -18,6 +18,7 @@ import { db, auth } from "@/app/lib/firebaseClient";
 import { doc, setDoc, deleteDoc, getDoc, updateDoc, increment, collection } from "firebase/firestore";
 import { useAuth } from "@/context/userContext";
 import { gtagEvent } from "@/app/lib/gtag";
+export const revalidate = 120;
 
 type Props = { 
   id: string;

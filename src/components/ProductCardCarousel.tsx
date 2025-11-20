@@ -74,6 +74,7 @@ export const ProductCardCarousel: React.FC<CardProps> = ({
                 width={500}
                 height={500}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
               />
             </div>
           ) : (

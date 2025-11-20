@@ -2,7 +2,6 @@
 import ProductoDetalleClient from "./ProductoDetalleClient";
 import { fetchProductById, fetchCategoryById, fetchProducts } from "@/app/lib/medusaClient";
 import { Metadata } from "next";
-
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const { id } = await params;
   
