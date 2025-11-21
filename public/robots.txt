@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://e-tianguis.com
+
+# Sitemaps
+Sitemap: https://e-tianguis.com/sitemap.xml

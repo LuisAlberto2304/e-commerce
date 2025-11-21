@@ -88,11 +88,12 @@ export async function processMedusaCheckout(checkoutData: CheckoutData) {
       nextSteps: ['Completar carrito y procesar inventario']
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     console.error('❌ Error en checkout completo:', error);
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     };
   }
 }

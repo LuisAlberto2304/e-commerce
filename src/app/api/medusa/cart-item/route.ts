@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
 
     // Validaciones
     if (!cartId || !items || !Array.isArray(items)) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        error: 'Missing cartId or items array' 
+        error: 'Missing cartId or items array'
       }, { status: 400 });
     }
 
@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📦 Agregando múltiples items al carrito Medusa:', { 
-      cartId, 
+    console.log('📦 Agregando múltiples items al carrito Medusa:', {
+      cartId,
       itemsCount: items.length,
-      hasToken: !!token 
+      hasToken: !!token
     });
 
     const results = [];
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       try {
         const { variant_id, quantity } = item;
-        
+
         if (!variant_id || !quantity || quantity < 1) {
           results.push({
             variant_id: variant_id || 'unknown',
@@ -80,11 +80,12 @@ export async function POST(request: NextRequest) {
           });
           console.warn(`⚠️ Item ${variant_id} falló:`, response.status, errorData);
         }
-      } catch (itemError: any) {
+      } catch (itemError: unknown) {
+        const errorMsg = itemError instanceof Error ? itemError.message : 'Error desconocido';
         results.push({
           variant_id: item.variant_id,
           success: false,
-          error: itemError.message
+          error: errorMsg
         });
         console.error(`❌ Error con item ${item.variant_id}:`, itemError);
       }
@@ -93,11 +94,11 @@ export async function POST(request: NextRequest) {
     // Calcular resultados
     const successful = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success);
-    
+
     console.log(`📊 Resultado: ${successful} exitosos, ${failed.length} fallidos`);
 
     if (successful > 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         cart: lastCart,
         results: results,
@@ -115,11 +116,12 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     console.error('❌ Error crítico en cart-item API:', error);
     return NextResponse.json({
       success: false,
-      error: error.message
+      error: errorMessage
     }, { status: 500 });
   }
 }

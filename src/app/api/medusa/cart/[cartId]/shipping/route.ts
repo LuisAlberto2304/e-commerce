@@ -44,9 +44,9 @@ export async function POST(
         status: response.status,
         error: errorText
       });
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to add shipping method',
           details: errorText
         },
@@ -55,18 +55,19 @@ export async function POST(
     }
 
     const result = await response.json();
-    
+
     console.log('✅ Método de envío agregado:', result.cart?.id);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       cart: result.cart,
-      success: true 
+      success: true
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     console.error('❌ Error agregando método de envío:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

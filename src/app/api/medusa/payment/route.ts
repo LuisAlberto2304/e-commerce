@@ -83,10 +83,11 @@ export async function POST(request: NextRequest) {
       payment_session: paymentSession.payment_session
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     console.error('❌ Error en proceso de pago:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -1,10 +1,16 @@
 // utils/cart.ts
-import { useAuth } from "@/context/userContext";
-export const createCartWithAuth = async (regionId?: string) => {
-  const { medusaToken, user } = useAuth(); // Tu hook de autenticación
-  
+
+interface User {
+  email?: string;
+}
+
+export const createCartWithAuth = async (
+  regionId?: string,
+  medusaToken?: string,
+  user?: User
+) => {
   try {
-    const cartData: any = {
+    const cartData: Record<string, unknown> = {
       region_id: regionId || process.env.NEXT_PUBLIC_MEDUSA_DEFAULT_REGION
     };
 
@@ -28,16 +34,19 @@ export const createCartWithAuth = async (regionId?: string) => {
 
     const data = await response.json();
     return data.cart;
-    
+
   } catch (error) {
     console.error('Error creating cart:', error);
     throw error;
   }
 };
 
-export const addToCart = async (cartId: string, variantId: string, quantity: number = 1) => {
-  const { medusaToken } = useAuth();
-  
+export const addToCart = async (
+  cartId: string,
+  variantId: string,
+  quantity: number = 1,
+  medusaToken?: string
+) => {
   try {
     const response = await fetch('/api/medusa/cart-item', {
       method: 'POST',
@@ -59,7 +68,7 @@ export const addToCart = async (cartId: string, variantId: string, quantity: num
 
     const data = await response.json();
     return data.cart;
-    
+
   } catch (error) {
     console.error('Error adding to cart:', error);
     throw error;

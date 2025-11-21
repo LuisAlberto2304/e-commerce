@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -15,7 +15,7 @@ interface CookieConsent {
   timestamp: string;
 }
 
-export default function Analytics() {
+function AnalyticsContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isClient, setIsClient] = useState(false);
@@ -23,7 +23,7 @@ export default function Analytics() {
 
   useEffect(() => {
     setIsClient(true);
-    
+
     // Verificar consentimiento existente
     if (typeof window !== "undefined") {
       const storedConsent = localStorage.getItem("cookieConsent");
@@ -31,7 +31,7 @@ export default function Analytics() {
         try {
           const consent: CookieConsent = JSON.parse(storedConsent);
           setHasConsent(consent.analytics);
-          
+
           console.log('🔍 Analytics component - Consent status:', {
             hasConsent: consent.analytics,
             storedConsent: consent
@@ -77,10 +77,10 @@ export default function Analytics() {
 
     // Escuchar cambios en localStorage
     window.addEventListener('storage', handleStorageChange);
-    
+
     // También escuchar cambios desde la misma pestaña
     const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key, value) {
+    localStorage.setItem = function (key, value) {
       originalSetItem.apply(this, [key, value]);
       if (key === 'cookieConsent') {
         handleStorageChange();
@@ -134,5 +134,13 @@ export default function Analytics() {
         `}
       </Script>
     </>
+  );
+}
+
+export default function Analytics() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsContent />
+    </Suspense>
   );
 }

@@ -26,7 +26,7 @@ export async function POST(
     }
 
     // Preparar datos para actualizar el carrito
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (email) {
       updateData.email = email;
@@ -58,9 +58,9 @@ export async function POST(
         status: response.status,
         error: errorText
       });
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to update cart',
           details: errorText
         },
@@ -69,22 +69,23 @@ export async function POST(
     }
 
     const cart = await response.json();
-    
+
     console.log('✅ Carrito actualizado:', {
       id: cart.cart?.id,
       email: cart.cart?.email,
       shipping_address: cart.cart?.shipping_address
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       cart: cart.cart,
-      success: true 
+      success: true
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     console.error('❌ Error actualizando carrito:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

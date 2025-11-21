@@ -4,7 +4,7 @@ export async function processCompleteCheckout() {
     // Recuperar datos guardados
     const paymentPreparation = localStorage.getItem("payment-preparation");
     const currentOrder = localStorage.getItem("currentOrder");
-    
+
     if (!paymentPreparation || !currentOrder) {
       throw new Error("Datos de checkout no encontrados");
     }
@@ -76,11 +76,12 @@ export async function processCompleteCheckout() {
       preparationData
     };
 
-  } catch (error: any) {
-    console.error("❌ Error en proceso de checkout:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    console.error('❌ Error en proceso de checkout:', error);
     return {
       success: false,
-      error: error.message
+      error: errorMessage
     };
   }
 }

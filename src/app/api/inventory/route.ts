@@ -26,9 +26,9 @@ export async function POST(req: Request) {
     // 1️⃣ Obtener información de la variante
     const variantRes = await fetch(`${medusaUrl}/store/variants/${variantId}`, {
       headers: {
+        "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY!,
         "Content-Type": "application/json",
-        ...(publishableKey && { "x-publishable-api-key": publishableKey }),
-      },
+    },
     });
 
     if (!variantRes.ok) {

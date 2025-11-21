@@ -59,9 +59,9 @@ class MedusaCheckoutService {
   /**
    * PASO 1: Crear carrito en Medusa
    */
-  async createCart(regionId: string): Promise<{ cartId: string; cart: any }> {
+  async createCart(regionId: string): Promise<{ cartId: string; cart: unknown }> {
     console.log('📦 Paso 1: Creando carrito...');
-    
+
     const response = await fetch(`${this.baseUrl}/store/carts`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -89,7 +89,7 @@ class MedusaCheckoutService {
    */
   async associateCustomer(cartId: string, email: string): Promise<void> {
     console.log('👤 Paso 2: Asociando customer al carrito...');
-    
+
     const response = await fetch(`${this.baseUrl}/store/carts/${cartId}`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -109,7 +109,7 @@ class MedusaCheckoutService {
    */
   async addItemsToCart(cartId: string, items: Array<{ variant_id: string; quantity: number }>): Promise<void> {
     console.log('🛍️ Paso 3: Agregando items al carrito...');
-    
+
     for (const item of items) {
       const response = await fetch(`${this.baseUrl}/store/carts/${cartId}/line-items`, {
         method: 'POST',
@@ -134,12 +134,12 @@ class MedusaCheckoutService {
    * PASO 4: Agregar dirección de envío
    */
   async addShippingAddress(
-    cartId: string, 
+    cartId: string,
     email: string,
     shippingAddress: CheckoutConfig['shippingAddress']
   ): Promise<void> {
     console.log('📍 Paso 4: Agregando dirección de envío...');
-    
+
     const response = await fetch(`${this.baseUrl}/store/carts/${cartId}`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -165,7 +165,7 @@ class MedusaCheckoutService {
    */
   async addShippingMethod(cartId: string, optionId: string): Promise<void> {
     console.log('🚚 Paso 5: Agregando método de envío...');
-    
+
     const response = await fetch(`${this.baseUrl}/store/carts/${cartId}/shipping-methods`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -185,7 +185,7 @@ class MedusaCheckoutService {
    */
   async createPaymentCollection(cartId: string): Promise<string> {
     console.log('💳 Paso 6: Creando payment collection...');
-    
+
     const response = await fetch(`${this.baseUrl}/store/payment-collections`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -213,7 +213,7 @@ class MedusaCheckoutService {
    */
   async createPaymentSession(paymentCollectionId: string): Promise<void> {
     console.log('💰 Paso 7: Creando payment session...');
-    
+
     const response = await fetch(
       `${this.baseUrl}/store/payment-collections/${paymentCollectionId}/payment-sessions`,
       {
@@ -234,9 +234,9 @@ class MedusaCheckoutService {
   /**
    * PASO 8: Completar carrito y crear orden
    */
-  async completeCart(cartId: string): Promise<{ orderId: string; order: any }> {
+  async completeCart(cartId: string): Promise<{ orderId: string; order: unknown }> {
     console.log('🎯 Paso 8: Completando carrito...');
-    
+
     const response = await fetch(`${this.baseUrl}/store/carts/${cartId}/complete`, {
       method: 'POST',
       headers: this.getHeaders()
@@ -248,7 +248,7 @@ class MedusaCheckoutService {
     }
 
     const data = await response.json();
-    
+
     if (data.type === 'order' && data.data) {
       console.log('✅ Orden creada:', data.data.id);
       return { orderId: data.data.id, order: data.data };
@@ -300,7 +300,7 @@ class MedusaCheckoutService {
       const { orderId, order } = await this.completeCart(cartId);
 
       console.log('🎉 ¡Checkout completado exitosamente!');
-      
+
       return {
         success: true,
         orderId,
@@ -308,12 +308,13 @@ class MedusaCheckoutService {
         step: 'completed'
       };
 
-    } catch (error: any) {
-      console.error(`❌ Error en paso ${currentStep}:`, error.message);
-      
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      console.error(`❌ Error en paso ${currentStep}:`, errorMessage);
+
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
         step: currentStep,
         cartId
       };

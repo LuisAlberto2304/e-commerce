@@ -10,80 +10,29 @@ interface CartItem {
 const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
 const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_API_KEY;
 
-const updateInventory = async (items: CartItem[]) => {
-  try {
-    // CORREGIDO: Enviar como objeto con propiedad items
-    const requestBody = {
-      items: items.map((i: CartItem) => ({
-        variantId: i.variant_id,
-        quantity: i.quantity,
-      })),
-    };
 
-    console.log('📤 Request body para inventario:', JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch(`${medusaUrl}/inventory`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-publishable-api-key': publishableKey!,
-      },
-      body: JSON.stringify(requestBody), // CORREGIDO: Enviar el objeto completo
-    });
-
-    // Verificar primero si la respuesta es HTML (error)
-    const responseText = await response.text();
-    
-    let result;
-    try {
-      result = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ La respuesta no es JSON válido:', responseText.substring(0, 200));
-      throw new Error(`El servidor respondió con HTML en lugar de JSON. Posible error 404 o ruta incorrecta.`);
-    }
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${result.message || 'Error actualizando inventario'}`);
-    }
-
-    return {
-      success: result.success,
-      results: result.results || [],
-      errors: result.errors_detail || [],
-      message: result.message || 'Inventario actualizado'
-    };
-  } catch (err: any) {
-    console.error('❌ Error en updateInventory:', err.message);
-    return { 
-      success: false, 
-      results: [], 
-      errors: [err.message],
-      message: err.message
-    };
-  }
-};
 
 // El resto de tu función POST permanece igual...
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
-    
+
     console.log('🔑 Token recibido en complete-cart:', token ? 'Sí' : 'No');
-    
+
     const { cartId, email, shipping_address, payment_method = 'manual', items = [] } = await request.json();
 
     if (!cartId) {
       return NextResponse.json({ error: 'Missing cartId' }, { status: 400 });
     }
 
-    console.log('🔄 Procesando orden completa...', { 
-      cartId, 
+    console.log('🔄 Procesando orden completa...', {
+      cartId,
       itemsCount: items.length,
       payment_method,
       authenticated: !!token
     });
-    
+
     if (!publishableKey) {
       return NextResponse.json(
         { error: 'NEXT_PUBLIC_MEDUSA_API_KEY no configurada' },
@@ -94,10 +43,15 @@ export async function POST(request: NextRequest) {
     // 1. ACTUALIZAR CARRITO CON INFORMACIÓN DEL CLIENTE
     try {
       const updateData: any = {};
-      
+
       if (email) updateData.email = email;
-      if (shipping_address) updateData.shipping_address = shipping_address;
-      
+      if (shipping_address) {
+        updateData.shipping_address = {
+          ...shipping_address,
+          country_code: shipping_address.country_code ? shipping_address.country_code.toLowerCase() : undefined
+        };
+      }
+
       updateData.metadata = {
         payment_method,
         created_via: 'nextjs-storefront',
@@ -115,7 +69,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify(updateData)
       });
-      
+
       if (updateResponse.ok) {
         console.log('✅ Carrito actualizado con información del cliente');
       } else {
@@ -126,28 +80,95 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ Error actualizando carrito:', updateError.message);
     }
 
-    // 2. ACTUALIZAR INVENTARIO - DESCONTAR PRODUCTOS
-    let inventoryResult = {
-      success: false,
-      results: [] as any[],
-      errors: [] as string[],
-      message: 'No se procesaron items'
+    // 2. AGREGAR MÉTODO DE ENVÍO (Shipping Method)
+    console.log('🚚 Agregando método de envío...');
+    try {
+      // Usamos el ID hardcodeado por ahora según instrucción del usuario
+      const shippingOptionId = "so_01K5HT9AP08S9T13NQEKCHHJCC";
+
+      const shippingResponse = await fetch(`${medusaUrl}/store/carts/${cartId}/shipping-methods`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': publishableKey!,
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ option_id: shippingOptionId })
+      });
+
+      if (shippingResponse.ok) {
+        console.log('✅ Método de envío agregado:', shippingOptionId);
+      } else {
+        const errorData = await shippingResponse.json();
+        console.warn('⚠️ Error agregando método de envío:', errorData);
+        // No lanzamos error aquí para permitir que continúe si es posible, 
+        // aunque probablemente falle en complete-cart si es requerido.
+      }
+    } catch (shippingError: any) {
+      console.warn('⚠️ Error en proceso de envío:', shippingError.message);
+    }
+
+    // 2. INICIALIZAR PAYMENT COLLECTION
+    console.log('💳 Inicializando Payment Collection...');
+
+    // Mantenemos la estructura de inventoryResult para no romper el resto del código
+    const inventoryResult = {
+      success: true,
+      results: [],
+      errors: [],
+      message: 'Inventario manejado nativamente por Medusa'
     };
-    
-    if (items.length > 0) {
-      console.log('📦 Procesando actualización de inventario...');
-      console.log('📤 Enviando items al inventario:', items.map((i: CartItem) => ({
-        variantId: i.variant_id,
-        quantity: i.quantity
-      })));
-      
-      inventoryResult = await updateInventory(items);
-      console.log('✅ Resultado inventario:', inventoryResult);
+
+    try {
+      // 2.1 Crear Payment Collection
+      const paymentCollectionResponse = await fetch(`${medusaUrl}/store/payment-collections`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': publishableKey!,
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ cart_id: cartId })
+      });
+
+      if (!paymentCollectionResponse.ok) {
+        const errorData = await paymentCollectionResponse.json();
+        console.error('❌ Error creando payment collection:', errorData);
+        throw new Error(`Error creating payment collection: ${errorData.message || 'Unknown error'}`);
+      }
+
+      const paymentCollectionData = await paymentCollectionResponse.json();
+      const paymentCollectionId = paymentCollectionData.payment_collection.id;
+      console.log('✅ Payment Collection creado:', paymentCollectionId);
+
+      // 2.2 Crear Payment Session
+      console.log('💳 Creando Payment Session...');
+      const paymentSessionResponse = await fetch(`${medusaUrl}/store/payment-collections/${paymentCollectionId}/payment-sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': publishableKey!,
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ provider_id: 'pp_system_default' })
+      });
+
+      if (!paymentSessionResponse.ok) {
+        const errorData = await paymentSessionResponse.json();
+        console.error('❌ Error creando payment session:', errorData);
+        throw new Error(`Error creating payment session: ${errorData.message || 'Unknown error'}`);
+      }
+
+      console.log('✅ Payment Session creado exitosamente');
+
+    } catch (paymentError: any) {
+      console.error('❌ Error en proceso de pago:', paymentError.message);
+      throw paymentError;
     }
 
     // 3. COMPLETAR CARRITO EN MEDUSA
     console.log('🎯 Completando carrito en Medusa...');
-    
+
     let orderResult;
     let completedViaApi = false;
 
@@ -160,11 +181,11 @@ export async function POST(request: NextRequest) {
           ...(token && { 'Authorization': `Bearer ${token}` })
         }
       });
-      
+
       if (completeResponse.ok) {
         const completedData = await completeResponse.json();
         console.log('🔍 Respuesta completa de Medusa:', JSON.stringify(completedData, null, 2));
-        
+
         if (completedData.type === 'order' && completedData.order) {
           orderResult = completedData.order;
           completedViaApi = true;
@@ -181,11 +202,11 @@ export async function POST(request: NextRequest) {
         });
         throw new Error(`Error ${completeResponse.status}: ${errorData.message}`);
       }
-      
+
     } catch (completeError: any) {
       console.error('⚠️ Error completando carrito:', completeError.message);
       console.log('📝 Creando orden manual como fallback...');
-      
+
       // FALLBACK: Crear orden manual
       orderResult = {
         id: `order_manual_${Date.now()}`,
@@ -212,7 +233,7 @@ export async function POST(request: NextRequest) {
     // 4. ENVIAR EMAIL CON LA ORDEN CORRECTA
     try {
       console.log('📧 Enviando email para orden:', orderResult.id);
-      
+
       const emailPayload: any = {
         to: orderResult.email,
         type: "confirmation",
@@ -238,7 +259,7 @@ export async function POST(request: NextRequest) {
 
       const emailResponse = await fetch(`${medusaUrl}/sendEmail`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-publishable-api-key": publishableKey
         },
@@ -255,8 +276,8 @@ export async function POST(request: NextRequest) {
       console.warn('❌ Error enviando email:', emailError.message);
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       order: orderResult,
       completed_via_api: completedViaApi,
       inventory_updated: inventoryResult.success,
@@ -267,7 +288,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Error crítico en complete-cart:', error);
-    
+
     return NextResponse.json({
       success: false,
       error: error.message

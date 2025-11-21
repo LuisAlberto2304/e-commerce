@@ -1,7 +1,7 @@
 // src/scripts/syncProductsToAlgolia.js
-const algoliasearch = require("algoliasearch");
-const axios = require("axios");
-require("dotenv").config(); // Carga las variables de .env
+import algoliasearch from "algoliasearch";
+import axios from "axios";
+import "dotenv/config"; // Carga las variables de .env
 
 // Variables de entorno
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
@@ -40,9 +40,9 @@ async function syncProducts() {
       description: p.description || "Sin descripción",
       price:
         p.variants &&
-        p.variants[0] &&
-        p.variants[0].prices &&
-        p.variants[0].prices[0]
+          p.variants[0] &&
+          p.variants[0].prices &&
+          p.variants[0].prices[0]
           ? p.variants[0].prices[0].amount
           : 0,
       thumbnail: p.thumbnail || "",

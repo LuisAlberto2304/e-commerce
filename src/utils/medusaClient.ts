@@ -3,11 +3,11 @@ import { useAuth } from '@/context/userContext';
 
 export const useMedusaClient = () => {
   const { medusaToken } = useAuth();
-  
+
   const medusaFetch = async (endpoint: string, options: RequestInit = {}) => {
-    const headers = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     // Agregar token de Medusa si está disponible

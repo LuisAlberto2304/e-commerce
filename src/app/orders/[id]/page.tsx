@@ -76,7 +76,7 @@ export default function OrderDetailPage() {
     });
 
     // Totales
-    let finalY = (doc as any).lastAutoTable.finalY + 10;
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
     doc.setFontSize(11);
     doc.text(`Subtotal: $${subtotal}`, 140, finalY);
     doc.text(`IVA Total: $${totalIVA}`, 140, finalY + 6);
@@ -105,13 +105,12 @@ export default function OrderDetailPage() {
           <p className="text-gray-500 text-sm">Realizado el {orderDate}</p>
         </div>
         <span
-          className={`mt-3 sm:mt-0 px-3 py-1 rounded-full text-sm font-medium ${
-            order.status === "Entregado"
+          className={`mt-3 sm:mt-0 px-3 py-1 rounded-full text-sm font-medium ${order.status === "Entregado"
               ? "bg-green-100 text-green-700"
               : order.status === "Enviado"
-              ? "bg-yellow-100 text-yellow-700"
-              : "bg-gray-100 text-gray-700"
-          }`}
+                ? "bg-yellow-100 text-yellow-700"
+                : "bg-gray-100 text-gray-700"
+            }`}
         >
           {order.status || "Procesando"}
         </span>
