@@ -45,10 +45,16 @@ export async function POST(request: NextRequest) {
       const updateData: any = {};
 
       if (email) updateData.email = email;
+
       if (shipping_address) {
+        let countryCode = shipping_address.country_code;
+        if (countryCode && countryCode.toLowerCase() === 'mexico') {
+          countryCode = 'mx';
+        }
+
         updateData.shipping_address = {
           ...shipping_address,
-          country_code: shipping_address.country_code ? shipping_address.country_code.toLowerCase() : undefined
+          country_code: countryCode
         };
       }
 
@@ -84,7 +90,7 @@ export async function POST(request: NextRequest) {
     console.log('🚚 Agregando método de envío...');
     try {
       // Usamos el ID hardcodeado por ahora según instrucción del usuario
-      const shippingOptionId = "so_01K5HT9AP08S9T13NQEKCHHJCC";
+      const shippingOptionId = "so_01K5HT9AP1KW93QSPHAK14B59C";
 
       const shippingResponse = await fetch(`${medusaUrl}/store/carts/${cartId}/shipping-methods`, {
         method: 'POST',
