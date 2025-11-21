@@ -5,10 +5,13 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { db, auth } from "../lib/firebaseClient";
 import { arrayRemove, collection, deleteDoc, doc, getDoc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // 🔹 Estados para país e IVA
   const [country, setCountry] = useState("MX");
@@ -25,6 +28,16 @@ export default function CartPage() {
     ES: 0.21,
     US: 0.07,
   };
+
+  // 🔹 Verificar estado de autenticación
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // 🔹 Detectar país automáticamente por IP
   useEffect(() => {
@@ -52,8 +65,10 @@ export default function CartPage() {
 
   // 🔹 Cargar carrito desde Firestore
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     // 🔹 Cambiado: ahora apunta a la subcolección del usuario
     const cartRef = collection(db, "users", user.uid, "cart");
@@ -68,8 +83,7 @@ export default function CartPage() {
     });
 
     return () => unsubscribe();
-  }, []);
-
+  }, [user]);
 
   // 🔹 Calcular subtotal, IVA y total
   const subtotal = cart.reduce(
@@ -85,12 +99,9 @@ export default function CartPage() {
 
   // 🔹 Eliminar producto del carrito
   const handleRemove = async (id: string) => {
-    const user = auth.currentUser;
     if (!user) return;
 
     try {
-      const user = auth.currentUser;
-      if (!user) return;
       const itemRef = doc(db, "users", user.uid, "cart", id);
       await deleteDoc(itemRef);
     } catch (error) {
@@ -100,14 +111,10 @@ export default function CartPage() {
 
   const handleQuantityChange = async (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    const user = auth.currentUser;
     if (!user) return;
 
     try {
-      const user = auth.currentUser;
-      if (!user) return;
       const itemRef = doc(db, "users", user.uid, "cart", id);
-
       await updateDoc(itemRef, { quantity: newQuantity });
       console.log("✅ Cantidad actualizada:", newQuantity);
     } catch (error) {
@@ -115,16 +122,7 @@ export default function CartPage() {
     }
   };
 
-
-
-  if (loading) {
-    return <p className="text-center py-10">Cargando tu carrito...</p>;
-  }
-
-  
   async function removeFromCart(productId: string) {
-    const user = auth.currentUser;
-
     if (!user) {
       alert("Debes iniciar sesión para modificar tu carrito.");
       return;
@@ -150,6 +148,50 @@ export default function CartPage() {
       console.error("❌ Error al eliminar producto:", error);
       alert("No se pudo eliminar el producto del carrito.");
     }
+  }
+
+  // 🔹 Mostrar loading mientras se verifica la autenticación
+  if (authLoading) {
+    return <p className="text-center py-10">Verificando autenticación...</p>;
+  }
+
+  // 🔹 Mensaje para usuarios no logueados
+  if (!user) {
+    return (
+      <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Tu carrito de compras</h1>
+        
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
+          <div className="max-w-md mx-auto">
+            <div className="w-24 h-24 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
+              <svg className="w-12 h-12 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Inicia sesión para ver tu carrito</h2>
+            <p className="text-gray-600 mb-6">Necesitas estar logueado para acceder a tu carrito de compras y gestionar tus productos.</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link 
+                href="/login" 
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+              >
+                Iniciar sesión
+              </Link>
+              <Link 
+                href="/register" 
+                className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"
+              >
+                Crear cuenta
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <p className="text-center py-10">Cargando tu carrito...</p>;
   }
 
   return (

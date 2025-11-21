@@ -25,7 +25,7 @@ export default function RegisterLoginClient() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false); // Nuevo estado para términos
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const { signInWithGoogle } = useAuth();
   const router = useRouter();
@@ -171,86 +171,106 @@ export default function RegisterLoginClient() {
   };
 
   return (
-    <div className="p-50 flex flex-col items-center justify-center bg-bg min-h-screen">
-      <div className="text-5xl space-x-3.5 p-5 font-bold hover:text-gray-600">
-        <Link href="/">
-          <h1>E-tianguis</h1>
-        </Link>
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-4 sm:p-6">
+      {/* Header */}
+      <div className="w-full max-w-md mb-4 sm:mb-6">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-center hover:text-gray-600 transition-colors">
+          <Link href="/">
+            <h1>E-tianguis</h1>
+          </Link>
+        </div>
       </div>
 
-      <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-8 sm:p-10">
-        <div className="mb-6">
+      {/* Form Container */}
+      <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-5 sm:p-6 md:p-8">
+        {/* Back Button */}
+        <div className="mb-4 sm:mb-6">
           <Link href="/">
-            <p className="text-blue-500 hover:text-blue-700 cursor-pointer text-sm">
-              ← Regresar al inicio
+            <p className="text-blue-500 hover:text-blue-700 cursor-pointer text-sm flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Regresar al inicio
             </p>
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+        {/* Title */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">
           Regístrate
         </h1>
 
+        {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre
-            </label>
-            <input
-              id="nombre"
-              name="nombre"
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Nombre"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown"
-            />
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name Fields - Grid para móvil */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-3">
+              <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre
+              </label>
+              <input
+                id="nombre"
+                name="nombre"
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Nombre"
+                required
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg shadow-sm 
+                           focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                           text-base"
+              />
+            </div>
+            
+            <div className="sm:col-span-3 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="apellidoPaterno" className="block text-sm font-medium text-gray-700 mb-1">
+                  Apellido Paterno
+                </label>
+                <input
+                  id="apellidoPaterno"
+                  name="apellidoPaterno"
+                  type="text"
+                  value={apellidoPaterno}
+                  onChange={(e) => setApellidoPaterno(e.target.value)}
+                  placeholder="Apellido Paterno"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
+                             focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                             text-base"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="apellidoMaterno" className="block text-sm font-medium text-gray-700 mb-1">
+                  Apellido Materno
+                </label>
+                <input
+                  id="apellidoMaterno"
+                  name="apellidoMaterno"
+                  type="text"
+                  value={apellidoMaterno}
+                  onChange={(e) => setApellidoMaterno(e.target.value)}
+                  placeholder="Apellido Materno"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm 
+                             focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                             text-base"
+                />
+              </div>
+            </div>
           </div>
 
+          {/* Email */}
           <div>
-            <label htmlFor="apellidoPaterno" className="block text-sm font-medium text-gray-700 mb-2">
-              Apellido Paterno
-            </label>
-            <input
-              id="apellidoPaterno"
-              name="apellidoPaterno"
-              type="text"
-              value={apellidoPaterno}
-              onChange={(e) => setApellidoPaterno(e.target.value)}
-              placeholder="Apellido Paterno"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="apellidoMaterno" className="block text-sm font-medium text-gray-700 mb-2">
-              Apellido Materno
-            </label>
-            <input
-              id="apellidoMaterno"
-              name="apellidoMaterno"
-              type="text"
-              value={apellidoMaterno}
-              onChange={(e) => setApellidoMaterno(e.target.value)}
-              placeholder="Apellido Materno"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Correo electrónico
             </label>
             <input
@@ -261,114 +281,123 @@ export default function RegisterLoginClient() {
               onChange={handleCredentials}
               placeholder="ejemplo@correo.com"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown"
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg shadow-sm 
+                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                         text-base"
             />
           </div>
 
-          {/* Selección de tipo de usuario */}
+          {/* Account Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Tipo de cuenta
             </label>
             <select 
               value={role} 
               onChange={(e) => setRole(e.target.value)} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown"
+              className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg shadow-sm 
+                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                         text-base"
             >
               <option value="buyer">Comprador</option>
               <option value="seller">Vendedor</option>
             </select>
           </div>
 
+          {/* Store Name (conditional) */}
           {role === "seller" && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre de la tienda
               </label>
               <input 
                 value={storeName} 
                 onChange={(e) => setStoreName(e.target.value)} 
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                           focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown" 
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg shadow-sm 
+                           focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown
+                           text-base" 
                 placeholder="Ej. Mi Tienda Artesanal" 
               />
             </div>
           )}
 
-          {/* Campo de contraseña con botón de visibilidad */}
-          <div className="relative">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={handleCredentials}
-              placeholder="••••••••"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown pr-10"
-            />
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6"
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            >
-              {showPassword ? (
-                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
+          {/* Password Fields */}
+          <div className="space-y-4">
+            {/* Password */}
+            <div className="relative">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={handleCredentials}
+                placeholder="••••••••"
+                required
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg shadow-sm 
+                           focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown pr-10
+                           text-base"
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-2 top-1/2 transform -translate-y-1/4 p-1"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? (
+                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* Confirm Password */}
+            <div className="relative">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmar contraseña
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg shadow-sm 
+                           focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown pr-10
+                           text-base"
+              />
+              <button
+                type="button"
+                onClick={toggleConfirmPasswordVisibility}
+                className="absolute right-2 top-1/2 transform -translate-y-1/4 p-1"
+                aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showConfirmPassword ? (
+                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Campo de confirmar contraseña con botón de visibilidad */}
-          <div className="relative">
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-              Confirmar contraseña
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type={showConfirmPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm 
-                         focus:outline-none focus:ring-2 focus:ring-brown focus:border-brown pr-10"
-            />
-            <button
-              type="button"
-              onClick={toggleConfirmPasswordVisibility}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center pt-6"
-              aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            >
-              {showConfirmPassword ? (
-                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          {/* Checkbox de términos y condiciones */}
-          <div className="flex items-start space-x-3">
+          {/* Terms and Conditions */}
+          <div className="flex items-start space-x-2">
             <input
               id="terms"
               type="checkbox"
@@ -376,7 +405,7 @@ export default function RegisterLoginClient() {
               onChange={(e) => setAcceptedTerms(e.target.checked)}
               className="mt-1 h-4 w-4 text-brown focus:ring-brown border-gray-300 rounded"
             />
-            <label htmlFor="terms" className="text-sm text-gray-700">
+            <label htmlFor="terms" className="text-xs sm:text-sm text-gray-700 leading-tight">
               Acepto los{" "}
               <Link href="/useTerms" className="text-blue-500 hover:text-blue-700 font-medium">
                 Términos y Condiciones
@@ -388,7 +417,8 @@ export default function RegisterLoginClient() {
             </label>
           </div>
 
-          <div className="text-center">
+          {/* Submit Button */}
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading || !acceptedTerms}
@@ -396,15 +426,27 @@ export default function RegisterLoginClient() {
                 w-full px-4 py-3 text-white bg-brown rounded-lg 
                 hover:bg-rosa focus:outline-none focus:ring-2 focus:ring-brown
                 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
-                font-medium
-                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : ''}
+                font-medium text-base
+                transition-all duration-200
+                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}
               `}
             >
-              {loading ? "Registrando..." : "Registrarse"}
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Registrando...
+                </span>
+              ) : (
+                "Registrarse"
+              )}
             </button>
           </div>
         </form>
 
+        {/* Separator */}
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -415,6 +457,7 @@ export default function RegisterLoginClient() {
             </div>
           </div>
 
+          {/* Google Sign In */}
           <div className="mt-4">
             <button
               type="button"
@@ -425,7 +468,8 @@ export default function RegisterLoginClient() {
                 shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 
                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
                 disabled:opacity-50 disabled:cursor-not-allowed
-                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : ''}
+                transition-all duration-200
+                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}
               `}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -439,6 +483,7 @@ export default function RegisterLoginClient() {
           </div>
         </div>
           
+        {/* Login Link */}
         <p className="mt-6 text-center text-sm text-gray-600">
           ¿Ya tienes cuenta?{" "}
           <Link href="/login" className="text-blue-500 hover:text-blue-700 font-medium">
