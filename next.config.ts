@@ -25,11 +25,10 @@ const securityHeaders = [
       ]),
 
   // CSP
-// {
-//   key: "Content-Security-Policy",
-//   value: baseCSP,
-// },
-
+  {
+    key: "Content-Security-Policy",
+    value: baseCSP,
+  },
 
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Frame-Options", value: "DENY" },
