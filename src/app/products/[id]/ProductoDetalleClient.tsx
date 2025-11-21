@@ -904,14 +904,12 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
             </div>
 
             {/* Precio */}
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl lg:text-3xl text-gray-900">
-                {getCurrentPrice()}
-              </span>
-              {originalPrice && (
-                <span className="text-sm text-gray-500 line-through">{originalPrice}</span>
-              )}
-            </div>
+            <span className="text-2xl lg:text-3xl text-gray-900">
+              {getCurrentPrice().toLocaleString("es-MX", {
+                style: "currency",
+                currency: "MXN",
+              })}
+            </span>
 
             {/* Estado de stock */}
             <div className="space-y-2">
@@ -1093,7 +1091,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 
   {/* Reseñas */}
   <div>
-    <ProductReviews reviews={mockReviews} averageRating={4.2} totalReviews={mockReviews.length} />
+    <ProductReviews productId={producto.id}/>
   </div>
 </div>
     </div>
