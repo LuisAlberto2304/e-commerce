@@ -268,16 +268,29 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   // Helper: obtener stock real de una variante
   // -------------------------------------------------
   const getVariantStock = (variant: any): number => {
-    // Medusa expone inventory_items con total_quantity (según tu log)
-    if (!variant) return 0;
-    if (typeof variant.total_quantity === "number") return variant.total_quantity;
-    if (Array.isArray(variant.inventory_items) && variant.inventory_items.length > 0) {
-      // sumar total_quantity de cada inventory item (defensivo)
-      return variant.inventory_items.reduce((acc: number, it: any) => {
-        const tq = typeof it.total_quantity === "number" ? it.total_quantity : (it.inventory?.available_quantity ?? 0);
-        return acc + Number(tq || 0);
-      }, 0);
-    }
+     if (!variant) return 0;
+ 
+     // Prioridad 1: `available_quantity` directamente en la variante (expansión simple).
+     if (typeof variant.available_quantity === "number") {
+       return variant.available_quantity;
+     }
+ 
+     // Prioridad 2: Sumar `available_quantity` desde los `location_levels` de cada `inventory_item`.
+     // Esta es la estructura que muestras en tu log.
+     if (Array.isArray(variant.inventory_items) && variant.inventory_items.length > 0) {
+       return variant.inventory_items.reduce((totalStock: number, item: any) => {
+         // La ruta correcta es item -> inventory -> location_levels
+         const inventory = item.inventory;
+         if (inventory && Array.isArray(inventory.location_levels) && inventory.location_levels.length > 0) {
+           const stockInLevels = inventory.location_levels.reduce((levelStock: number, level: any) => {
+             return levelStock + (level.available_quantity || 0);
+           }, 0);
+           return totalStock + stockInLevels;
+         }
+         return totalStock;
+       }, 0);
+     }
+ 
     return 0;
   };
 
@@ -1089,4 +1102,3 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 function setAvailableQuantity(stock: any) {
   throw new Error("Function not implemented.");
 }
-
