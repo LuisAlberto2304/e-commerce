@@ -7,6 +7,8 @@ import {
   User,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut
 } from 'firebase/auth';
@@ -20,7 +22,7 @@ interface AuthContextType {
   user: User | null;
   role: string; // Cambiar a role para consistencia
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (useRedirect?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   medusaToken: string | null;
   customer: any | null;
@@ -70,12 +72,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const savedToken = localStorage.getItem('medusaToken');
     const savedCustomer = localStorage.getItem('medusaCustomer');
-    
+
     if (savedToken) {
       console.log('🔑 Token recuperado de localStorage');
       setMedusaToken(savedToken);
     }
-    
+
     if (savedCustomer) {
       try {
         const customerData = JSON.parse(savedCustomer);
@@ -111,10 +113,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const syncWithMedusa = async (firebaseUser: User) => {
     try {
       console.log('🔄 Sincronizando con Medusa...');
-      
+
       // Intentar obtener customer existente
       const medusaData = await getMedusaCustomerWithFirebaseToken();
-      
+
       if (medusaData.medusaToken && medusaData.customer) {
         setMedusaToken(medusaData.medusaToken);
         setCustomer(medusaData.customer);
@@ -133,6 +135,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // No lanzar error para no bloquear el login
     }
   };
+
+  // Manejar resultado de redirect (si se usó signInWithRedirect)
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          console.log('✅ Google sign-in via redirect successful:', result.user.email);
+        }
+      } catch (error: any) {
+        console.error('❌ Error handling redirect result:', error);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -200,34 +218,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => unsubscribe();
   }, [pathname, router]);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (useRedirect: boolean = false) => {
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      console.log('✅ Google sign-in successful:', result.user.email);
-      
-      // Esperar a que onAuthStateChanged maneje la sincronización
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // La redirección se maneja en onAuthStateChanged
-      
+      console.log('🔵 Iniciando Google Sign-In...');
+
+      if (useRedirect) {
+        // Usar redirect en lugar de popup (más confiable en móviles)
+        console.log('🔄 Usando redirect method...');
+        await signInWithRedirect(auth, provider);
+        // El resultado se maneja en useEffect con getRedirectResult
+      } else {
+        // Intentar con popup primero
+        console.log('🪟 Usando popup method...');
+        const result = await signInWithPopup(auth, provider);
+        console.log('✅ Google sign-in successful:', result.user.email);
+
+        // Esperar a que onAuthStateChanged maneje la sincronización
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
     } catch (error: any) {
       console.error('❌ Error signing in with Google:', error);
-      
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+
       if (error.code === 'auth/operation-not-allowed') {
-        throw new Error('El inicio de sesión con Google no está habilitado.');
+        throw new Error('El inicio de sesión con Google no está habilitado en Firebase Console.');
       } else if (error.code === 'auth/popup-blocked') {
-        throw new Error('El popup fue bloqueado. Permite popups para este sitio.');
+        throw new Error('El popup fue bloqueado por el navegador. Intenta permitir popups o usa el método alternativo.');
       } else if (error.code === 'auth/popup-closed-by-user') {
-        throw new Error('Cerraste la ventana de inicio de sesión.');
+        throw new Error('Cerraste la ventana de inicio de sesión antes de completar el proceso.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        throw new Error('Se canceló la solicitud de popup. Intenta nuevamente.');
       } else if (error.code === 'auth/network-request-failed') {
         throw new Error('Error de red. Verifica tu conexión a internet.');
+      } else if (error.code === 'auth/unauthorized-domain') {
+        throw new Error('Este dominio no está autorizado. Agrega el dominio en Firebase Console.');
       } else {
-        throw error;
+        throw new Error(`Error al iniciar sesión con Google: ${error.message}`);
       }
     }
   };
@@ -251,12 +284,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = await loginMedusaCustomer(email, password);
       setMedusaToken(token);
-      
+
       console.log('🔐 Token de Medusa obtenido:', {
         hasToken: !!token,
         tokenPreview: token?.substring(0, 20) + '...'
       });
-      
+
       return token;
     } catch (error) {
       console.error('❌ Error obteniendo token de Medusa:', error);
