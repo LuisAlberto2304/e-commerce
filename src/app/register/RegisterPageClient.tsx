@@ -25,7 +25,7 @@ export default function RegisterLoginClient() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false); // Nuevo estado para términos
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const { signInWithGoogle } = useAuth();
   const router = useRouter();
@@ -177,28 +177,38 @@ export default function RegisterLoginClient() {
   };
 
   return (
-    <div className="p-50 flex flex-col items-center justify-center bg-bg min-h-screen">
-      <div className="text-5xl space-x-3.5 p-5 font-bold hover:text-gray-600">
-        <Link href="/">
-          <h1>E-tianguis</h1>
-        </Link>
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-4 sm:p-6">
+      {/* Header */}
+      <div className="w-full max-w-md mb-4 sm:mb-6">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-center hover:text-gray-600 transition-colors">
+          <Link href="/">
+            <h1>E-tianguis</h1>
+          </Link>
+        </div>
       </div>
 
-      <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-8 sm:p-10">
-        <div className="mb-6">
+      {/* Form Container */}
+      <div className="w-full max-w-md bg-white shadow-lg rounded-xl p-5 sm:p-6 md:p-8">
+        {/* Back Button */}
+        <div className="mb-4 sm:mb-6">
           <Link href="/">
-            <p className="text-blue-500 hover:text-blue-700 cursor-pointer text-sm">
-              ← Regresar al inicio
+            <p className="text-blue-500 hover:text-blue-700 cursor-pointer text-sm flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Regresar al inicio
             </p>
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+        {/* Title */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">
           Regístrate
         </h1>
 
+        {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
             {error}
           </div>
         )}
@@ -410,8 +420,9 @@ export default function RegisterLoginClient() {
                 w-full px-4 py-3 text-white bg-brown rounded-lg 
                 hover:bg-rosa focus:outline-none focus:ring-2 focus:ring-brown
                 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
-                font-medium
-                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : ''}
+                font-medium text-base
+                transition-all duration-200
+                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}
               `}
                 >
                   {loading ? "Registrando..." : "Registrarse"}
@@ -421,6 +432,7 @@ export default function RegisterLoginClient() {
           </div>
         </form>
 
+        {/* Separator */}
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -431,6 +443,7 @@ export default function RegisterLoginClient() {
             </div>
           </div>
 
+          {/* Google Sign In */}
           <div className="mt-4">
             <button
               type="button"
@@ -441,7 +454,8 @@ export default function RegisterLoginClient() {
                 shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 
                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
                 disabled:opacity-50 disabled:cursor-not-allowed
-                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : ''}
+                transition-all duration-200
+                ${(loading || !acceptedTerms) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'}
               `}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">

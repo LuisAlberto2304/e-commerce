@@ -302,10 +302,11 @@ export const Header = () => {
   return (
     <header className="header bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Primera fila: Logo, búsqueda y elementos de usuario */}
         <div className="flex items-center justify-between h-16">
           
           {/* Logo y menú hamburguesa */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {/* Botón menú hamburguesa - Solo móvil */}
             <button 
               className="lg:hidden p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-colors"
@@ -352,8 +353,8 @@ export const Header = () => {
           </div>
 
           {/* Barra de búsqueda - Oculto en móvil, visible en tablet+ */}
-          <div className="hidden md:block flex-1 max-w-2xl mx-8">
-            <div className="relative" ref={desktopDropdownRef}>
+          <div className="hidden md:flex flex-1 max-w-2xl mx-4 lg:mx-8 min-w-0">
+            <div className="relative w-full" ref={desktopDropdownRef}>
               <div className="flex items-center bg-amber-100 border border-brown rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-brown transition-all duration-300">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -374,7 +375,7 @@ export const Header = () => {
                     }
                   }}
                   placeholder="Buscar productos o tiendas..."
-                  className="flex-1 bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none px-3 py-2 rounded-r-2xl w-full"
+                  className="flex-1 bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none px-3 py-2 rounded-r-2xl w-full min-w-0"
                 />
 
                 {/* Loading spinner */}
@@ -463,24 +464,37 @@ export const Header = () => {
           </div>
 
           {/* Navegación Desktop - Solo visible en desktop */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
             {/* Menú de categorías */}
             <div className="header__categories">
               <Link 
                 href="/category" 
-                className="text-gray-700 hover:text-brown transition-colors font-medium"
+                className="text-gray-700 hover:text-brown transition-colors font-medium whitespace-nowrap"
               >
                 Todos los productos
               </Link>  
             </div>
 
+            {/* Carrito Desktop */}
+            <Link 
+              href="/cart" 
+              className="relative p-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors flex-shrink-0"
+            >
+              <ShoppingCart size={20} className="text-gray-700" />
+              {itemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </Link>
+
             {/* Sección de usuario Desktop */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {user ? (
                 <>
                   {/* Información del usuario */}
                   <Link href="/profile">
-                    <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer">
+                    <div className="header__user-info flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer whitespace-nowrap">
                       <User size={18} className="text-brown" />
                       <div className="flex flex-col">
                         <span className="text-xs text-gray-500 leading-none">Hola,</span>
@@ -491,42 +505,10 @@ export const Header = () => {
                     </div>
                   </Link>
                   
-                  {/* Enlaces de admin y seller */}
-                  <div className="flex items-center gap-3 border-l border-gray-200 pl-4 ml-2">
-                    {/* Panel de Seller */}
-                    {(role === "seller" || role === "admin") && (
-                      <Link
-                        href="/seller/dashboard"
-                        className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:shadow-md transition-all"
-                      >
-                        🏪 Mi Tienda
-                      </Link>
-                    )}
-                    
-                    {/* Panel de Admin */}
-                    {role === "admin" && (
-                      <>
-                        <Link
-                          href="/admin"
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:shadow-md transition-all"
-                        >
-                          👑 Panel Admin
-                        </Link>
-
-                        <Link
-                          href="/admin/returns"
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white shadow-sm border border-gray-100 hover:shadow-md hover:bg-gray-50 transition-all text-black"
-                        >
-                          🔄 Reembolsos
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                  
                   {/* Botón de cerrar sesión */}
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center gap-2 text-sm font-medium cursor-pointer"
+                    className="px-3 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center gap-2 text-sm font-medium cursor-pointer whitespace-nowrap"
                   >
                     <LogOut size={16} />
                     <span>Salir</span>
@@ -535,13 +517,13 @@ export const Header = () => {
               ) : (
                 <div className="flex items-center gap-3">
                   <Link href="/login">
-                    <button className="px-4 py-2 text-brown bg-white border border-brown rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <button className="px-3 py-2 text-brown bg-white border border-brown rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center gap-2 text-sm font-medium cursor-pointer whitespace-nowrap">
                       <LogIn size={16} />
                       <span>Entrar</span>
                     </button>
                   </Link>
                   <Link href="/register">
-                    <button className="px-4 py-2 text-white bg-brown border border-brown rounded-lg hover:bg-rosa focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <button className="px-3 py-2 text-white bg-brown border border-brown rounded-lg hover:bg-rosa focus:outline-none focus:ring-2 focus:ring-brown focus:ring-offset-2 transition-all flex items-center gap-2 text-sm font-medium cursor-pointer whitespace-nowrap">
                       <UserPlus size={16} />
                       <span>Registrarse</span>
                     </button>
@@ -549,25 +531,12 @@ export const Header = () => {
                 </div>
               )}
             </div>
-
-            {/* Carrito Desktop */}
-            <Link 
-              href="/cart" 
-              className="relative p-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
-            >
-              <ShoppingCart size={20} className="text-gray-700" />
-              {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {itemCount}
-                </span>
-              )}
-            </Link>
           </div>
 
           {/* Carrito Móvil - Solo visible en móvil */}
           <Link 
             href="/cart" 
-            className="lg:hidden relative p-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+            className="lg:hidden relative p-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors flex-shrink-0"
           >
             <ShoppingCart size={20} className="text-gray-700" />
             {itemCount > 0 && (
@@ -577,6 +546,40 @@ export const Header = () => {
             )}
           </Link>
         </div>
+
+        {/* Segunda fila: Botones de admin/seller - Solo desktop */}
+        {(user && (role === "seller" || role === "admin")) && (
+          <div className="hidden lg:flex items-center gap-3 pb-3 border-t border-gray-100 pt-2">
+            {/* Panel de Seller */}
+            {(role === "seller" || role === "admin") && (
+              <Link
+                href="/seller/dashboard"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:shadow-md transition-all whitespace-nowrap"
+              >
+                🏪 Mi Tienda
+              </Link>
+            )}
+            
+            {/* Panel de Admin */}
+            {role === "admin" && (
+              <>
+                <Link
+                  href="/admin"
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:shadow-md transition-all whitespace-nowrap"
+                >
+                  👑 Panel Admin
+                </Link>
+
+                <Link
+                  href="/admin/returns"
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white shadow-sm border border-gray-100 hover:shadow-md hover:bg-gray-50 transition-all text-black whitespace-nowrap"
+                >
+                  🔄 Reembolsos
+                </Link>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Barra de búsqueda móvil - Solo visible en móvil */}
         <div className="md:hidden pb-3 px-2">
