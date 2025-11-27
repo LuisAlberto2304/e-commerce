@@ -18,6 +18,7 @@ import { db, auth } from "@/app/lib/firebaseClient";
 import { doc, setDoc, deleteDoc, getDoc, updateDoc, increment, collection } from "firebase/firestore";
 import { useAuth } from "@/context/userContext";
 import { gtagEvent } from "@/app/lib/gtag";
+import { useAlert } from "@/hooks/useCustomAlert";
 export const revalidate = 120;
 
 type Props = { 
@@ -49,6 +50,7 @@ interface ProductVariant {
   images?: any[];
   // otros campos posibles...
 }
+
 
 // Helpers de imágenes (tu lógica original)
 const getProductImages = (product: any) => {
@@ -183,7 +185,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 
   const toggleFavorite = async () => {
     if (!user) {
-      alert("Inicia sesión para guardar productos.");
+      showAlert("Inicia sesión para guardar productos.", "warning");
       return;
     }
 
@@ -616,23 +618,25 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
     }
   };
 
+  const { showAlert } = useAlert();
 
   const handleAddToCart = async () => {
+    
     if (!selectedVariant) {
-      alert("Selecciona una variante antes de continuar");
+      showAlert("Selecciona una variante antes de continuar", "warning");
       return;
     }
 
     const isAvailable = await checkInventory(selectedVariant.id, quantity);
 
     if (!isAvailable) {
-      alert("Lo sentimos, no hay suficiente stock disponible");
+      showAlert("Lo sentimos, sin stock disponible", "error");
       return;
     }
 
     const user = auth.currentUser;
     if (!user) {
-      alert("Debes iniciar sesión para agregar al carrito");
+      showAlert("Debes iniciar sesión para continuar", "warning");
       return;
     }
 
@@ -684,11 +688,11 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
       }
 
       console.log("🛒 Producto agregado al carrito:", cartItem);
-      alert(`✅ ¡Agregado al carrito!\n${producto.title}\n${Object.entries(selectedOptions).map(([k, v]) => `${k}: ${v}`).join(' • ')}\nCantidad: ${quantity}`);
+      showAlert(`✅ ¡Agregado al carrito!\n${producto.title}\n${Object.entries(selectedOptions).map(([k, v]) => `${k}: ${v}`).join(' • ')}\nCantidad: ${quantity}`, "success");
       setQuantity(1);
     } catch (error) {
       console.error("❌ Error al agregar al carrito:", error);
-      alert("Error al agregar el producto al carrito");
+      showAlert("Error al agregar el producto al carrito", "error");
     } finally {
       setAddingToCart(false);
     }

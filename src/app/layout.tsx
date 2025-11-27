@@ -6,6 +6,7 @@ import LayoutContent from './LayoutContent'
 import Script from 'next/script'
 import  Analytics  from '@/components/Analytics'
 
+
 // 🔹 Configuración optimizada de fuentes
 const inter = Inter({
   subsets: ['latin'],
@@ -76,11 +77,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${inter.className} bg-bg text-text min-h-screen flex flex-col antialiased`}>
-        {/* 🔹 Client Component para lógica de ruta */}
-        <LayoutContent>{children}</LayoutContent>
-        <Analytics /> {/* 👈 nuevo componente para navegación SPA */}
-        {/* 🔹 Métricas de performance */}
-        <PerformanceMetrics />
+          {/* 🔹 Client Component para lógica de ruta */}
+          <LayoutContent>{children}</LayoutContent>
+          <Analytics /> {/* 👈 nuevo componente para navegación SPA */}
+          {/* 🔹 Métricas de performance */}
+          <PerformanceMetrics />
       </body>
     </html>
   )
