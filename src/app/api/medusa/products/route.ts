@@ -16,11 +16,20 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const authHeader = request.headers.get('authorization');
+
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: "Missing Authorization header" },
+        { status: 401 }
+      );
+    }
+
     const medusaResponse = await fetch(`${MEDUSA_URL}/products`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ADMIN_KEY}`
+        'Authorization': authHeader // Forward the token from the client
       },
       body: JSON.stringify(body),
     });
@@ -28,7 +37,7 @@ export async function POST(request: NextRequest) {
     const resText = await medusaResponse.text();
     let data = {};
 
-    try { data = JSON.parse(resText); } catch {}
+    try { data = JSON.parse(resText); } catch { }
 
     if (!medusaResponse.ok) {
       return NextResponse.json(

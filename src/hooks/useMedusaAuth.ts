@@ -2,16 +2,21 @@
 // hooks/useMedusaAuth.ts
 'use client';
 
+import { useAuth } from '@/context/userContext';
+
 export const useMedusa = () => {
+  const { medusaToken } = useAuth();
+
   const createProduct = async (productData: any) => {
     try {
       console.log('🔄 Enviando producto a API...', productData.title);
-      
+
       // Asegúrate de que la URL sea correcta - /api/medusa/products
       const res = await fetch('/api/medusa/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${medusaToken}`
         },
         body: JSON.stringify(productData),
       });
