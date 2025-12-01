@@ -4,11 +4,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { store_id: string } }
+  context: { params: Promise<{ sellerId: string }> } // Cambiado a sellerId
 ) {
   try {
     // IMPORTANTE: await params en Next.js App Router
-    const { store_id } = await params;
+    const { sellerId } = await context.params; // Cambiado a sellerId
+    
+    // Si necesitas mantener la compatibilidad, puedes renombrar
+    const store_id = sellerId;
     
     const medusaUrl = `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/seller/products`;
     
