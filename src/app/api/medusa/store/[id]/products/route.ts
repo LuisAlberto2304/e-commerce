@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // Cambiado aquí
 ) {
   try {
-    const { id } = await params; // Este es el Medusa Seller ID
+    const { id } = await context.params; // Ahora obtenemos de context.params
     const MEDUSA_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
 
     if (!MEDUSA_URL) {
