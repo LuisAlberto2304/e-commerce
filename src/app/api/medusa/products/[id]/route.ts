@@ -3,6 +3,24 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// GET method
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    // Tu lógica GET aquí
+    return NextResponse.json({ id });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST method (tu código actualizado)
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -25,7 +43,6 @@ export async function POST(
       );
     }
 
-    // Ahora los params son una Promise, necesitamos await
     const { id } = await context.params;
 
     if (!id) {
