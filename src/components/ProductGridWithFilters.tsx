@@ -435,7 +435,22 @@ const getAllUniqueColors = useMemo(() => {
   };
 
   const getProductRating = (productId: string): number => {
-    return ratings[productId] || 0;
+    const ratingObj = ratings[productId];
+    // Si ratingObj es undefined o null, devolver 0
+    if (!ratingObj) return 0;
+    
+    // Si ratingObj tiene una propiedad averageRating, usar esa
+    if ('averageRating' in ratingObj && typeof ratingObj.averageRating === 'number') {
+      return ratingObj.averageRating;
+    }
+    
+    // Si ratingObj es un número directamente (caso poco probable pero por seguridad)
+    if (typeof ratingObj === 'number') {
+      return ratingObj;
+    }
+    
+    // Valor por defecto
+    return 0;
   };
 
   // Cargar productos
