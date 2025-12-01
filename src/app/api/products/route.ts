@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const q = url.searchParams.get("q") || undefined;
     const color = url.searchParams.get("color") || undefined;
     const size = url.searchParams.get("size") || undefined;
-    const limit = url.searchParams.get("limit") || "100";
+    const limit = url.searchParams.get("limit") || "200"; // Aumentar límite
     const offset = url.searchParams.get("offset") || "0";
 
     console.log("🎯 FILTROS RECIBIDOS EN BACKEND:", {
@@ -24,17 +24,17 @@ export async function GET(req: NextRequest) {
       size,
       limit,
       offset,
-      tieneColor: !!color,
-      tieneSize: !!size
     });
 
-    // 🔹 Construir parámetros para Medusa (solo 1 categoría, por compatibilidad)
+    // 🔹 Construir parámetros para Medusa - EXPANDIR MÁS RELACIONES
     const medusaParams = new URLSearchParams();
     if (categoryId) medusaParams.append("category_id", categoryId);
     if (q) medusaParams.append("q", q);
     medusaParams.append("limit", limit);
     medusaParams.append("offset", offset);
-    medusaParams.append("expand", "categories,category,options,variants,variants.options,variants.prices");
+
+    // 🔹 EXPANSIÓN CORREGIDA - usar comas sin espacios
+    medusaParams.append("expand", "categories,category,options,options.values,variants,variants.options,variants.prices,images,tags,collection,variants.options.option");
 
     const medusaUrl = `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/products?${medusaParams.toString()}`;
     console.log("📡 Llamando a Medusa:", medusaUrl);
@@ -58,20 +58,24 @@ export async function GET(req: NextRequest) {
     const data = await res.json();
     let products = data.products || [];
 
-    console.log("🔍 DEBUG ESTRUCTURA MEDUSA:", {
-      totalProducts: products.length,
-      firstProduct: products[0]
-        ? {
-            id: products[0].id,
-            title: products[0].title,
-            category: products[0].category,
-            categories: products[0].categories,
-            category_id: products[0].category_id,
-          }
-        : "No products",
-    });
+    console.log("🔍 DEBUG ESTRUCTURA MEDUSA - PRIMER PRODUCTO:", products[0] ? {
+      id: products[0].id,
+      title: products[0].title,
+      options: products[0].options?.map((opt: any) => ({
+        title: opt.title,
+        values: opt.values?.map((v: any) => v.value)
+      })),
+      variants: products[0].variants?.map((v: any) => ({
+        id: v.id,
+        options: v.options?.map((o: any) => ({
+          value: o.value,
+          option_title: o.option?.title
+        }))
+      })),
+      categories: products[0].categories
+    } : "No products");
 
-    // 🔹 Filtrado local por categorías múltiples
+    // 🔹 Filtrado local por categorías múltiples (mantener este)
     if (categoryIds.length > 0) {
       const before = products.length;
       console.log(`🎯 APLICANDO FILTRO POR MÚLTIPLES CATEGORÍAS: ${categoryIds.join(", ")}`);
@@ -83,28 +87,15 @@ export async function GET(req: NextRequest) {
           ...(product.categories?.map((c: any) => c.id) || []),
         ].filter(Boolean);
 
-        console.log(
-          "🧩 Revisando producto:",
-          product.title,
-          "→ category_id:",
-          product.category_id,
-          "→ category:",
-          product.category?.id,
-          "→ categories:",
-          product.categories?.map((c: any) => c.id)
-        );
-
-
         // Verifica si alguna categoría del producto coincide con las seleccionadas
         return productCats.some((id: string) =>
           categoryIds.some(cid => id.toLowerCase() === cid.toLowerCase())
         );
-
       });
 
       console.log(`🎯 RESULTADO FILTRO MULTICATEGORÍA: ${before} → ${products.length}`);
     }
-    // 🔹 Filtrado local si solo hay una categoría individual
+    // 🔹 Filtrado local si solo hay una categoría individual (mantener este)
     else if (categoryId) {
       const before = products.length;
       console.log(`🎯 APLICANDO FILTRO MANUAL POR CATEGORÍA: ${categoryId}`);
@@ -117,15 +108,13 @@ export async function GET(req: NextRequest) {
         ].filter(Boolean);
 
         const matches = categoryIds.some((id: string) => id?.toLowerCase() === categoryId.toLowerCase());
-
         return matches;
       });
 
       console.log(`🎯 RESULTADO FILTRO CATEGORÍA: ${before} → ${products.length}`);
     }
 
-
-    // 🔍 Filtro local por q (búsqueda)
+    // 🔍 Filtro local por q (búsqueda) - mantener este
     if (q && q.trim() !== "") {
       const searchTerm = q.toLowerCase().trim();
       const beforeCount = products.length;
@@ -135,58 +124,11 @@ export async function GET(req: NextRequest) {
       console.log(`🔍 RESULTADO FILTRO Q: ${beforeCount} → ${products.length}`);
     }
 
-    // 🎨 Filtrado color y 📏 talla (sin cambios)
-    if (color && color.trim() !== "") {
-      const colorTerm = color.toLowerCase().trim();
-      const beforeCount = products.length;
+    // 🔹 IMPORTANTE: NO filtrar por color y tamaño aquí
+    // El filtrado por color y tamaño se hará en el cliente para manejar variantes
+    console.log("ℹ️  Filtrado por color y tamaño se realizará en el cliente");
 
-      products = products.filter((product: any) => {
-        let match = false;
-        if (product.options) {
-          match = product.options.some((option: any) =>
-            option.values?.some((v: any) => v.value?.toLowerCase().includes(colorTerm))
-          );
-        }
-        if (!match && product.variants) {
-          match = product.variants.some((variant: any) =>
-            variant.options?.some((opt: any) => opt.value?.toLowerCase().includes(colorTerm))
-          );
-        }
-        if (!match && product.metadata?.color) {
-          match = product.metadata.color.toLowerCase().includes(colorTerm);
-        }
-        return match;
-      });
-
-      console.log(`🎨 RESULTADO FILTRO COLOR: ${beforeCount} → ${products.length}`);
-    }
-
-    if (size && size.trim() !== "") {
-      const sizeTerm = size.toLowerCase().trim();
-      const beforeCount = products.length;
-
-      products = products.filter((product: any) => {
-        let match = false;
-        if (product.options) {
-          match = product.options.some((option: any) =>
-            option.values?.some((v: any) => v.value?.toLowerCase().includes(sizeTerm))
-          );
-        }
-        if (!match && product.variants) {
-          match = product.variants.some((variant: any) =>
-            variant.options?.some((opt: any) => opt.value?.toLowerCase().includes(sizeTerm))
-          );
-        }
-        if (!match && product.metadata?.size) {
-          match = product.metadata.size.toLowerCase().includes(sizeTerm);
-        }
-        return match;
-      });
-
-      console.log(`📏 RESULTADO FILTRO SIZE: ${beforeCount} → ${products.length}`);
-    }
-
-    console.log("✅ PRODUCTOS FINALES:", products.length);
+    console.log("✅ PRODUCTOS FINALES PARA CLIENTE:", products.length);
     return NextResponse.json({
       products,
       count: products.length,

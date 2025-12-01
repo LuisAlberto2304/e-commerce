@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/lib/medusaClient.ts
 
@@ -82,8 +83,8 @@ function matchesSize(product: any, sizeTerm: string) {
 }
 
 export async function fetchProducts(filters: {
-  categoryId?: string;      // ← sigue permitiendo una sola categoría
-  categoryIds?: string[];   // ← permite varias categorías
+  categoryId?: string;
+  categoryIds?: string[];
   q?: string;
   color?: string;
   size?: string;
@@ -93,20 +94,21 @@ export async function fetchProducts(filters: {
   const baseUrl = getBaseUrl();
   const params = new URLSearchParams();
 
-  // 🔹 Si hay varias categorías, las unimos en una sola cadena separada por comas
+  // 🔹 Solo parámetros básicos para la API - NO incluir color/size aquí
   if (filters.categoryIds?.length) {
-    params.append("categoryIds", filters.categoryIds.join(",")); // Ejemplo: cat_a,cat_b,cat_c
-  } 
-  // 🔹 Si solo hay una categoría individual
-  else if (filters.categoryId) {
+    params.append("categoryIds", filters.categoryIds.join(","));
+  } else if (filters.categoryId) {
     params.append("categoryId", filters.categoryId);
   }
 
   if (filters.q?.trim()) params.append("q", filters.q.trim());
-  if (filters.color?.trim()) params.append("color", filters.color.trim());  // ✅ NUEVO
-  if (filters.size?.trim()) params.append("size", filters.size.trim());
-  params.append("limit", String(filters.limit ?? 100));
+  
+  // 🔹 Aumentar el límite y expandir relaciones
+  params.append("limit", String(filters.limit ?? 200));
   params.append("offset", String(filters.offset ?? 0));
+  
+  // 🔹 IMPORTANTE: Expandir todas las relaciones necesarias
+  params.append("expand", "variants,variants.options,variants.prices,options,options.values,categories,tags");
 
   const url = `${baseUrl}/api/products?${params.toString()}`;
 
@@ -124,26 +126,26 @@ export async function fetchProducts(filters: {
     const data = await res.json();
     let products: any[] = data.products || [];
 
-    // Normalizar términos para filtrado local
-    const colorTerm = filters.color?.trim().toLowerCase() || undefined;
-    const sizeTerm = filters.size?.trim().toLowerCase() || undefined;
-
-    console.log("🔎 fetchProducts - productos recibidos:", products.length, { colorTerm, sizeTerm });
-
-    // Filtrado local (color/size)
-    if (colorTerm) {
-      const before = products.length;
-      products = products.filter((p) => matchesColor(p, colorTerm));
-      console.log(`🎨 Filtrado color "${colorTerm}": ${before} → ${products.length}`);
+    console.log("✅ fetchProducts - productos recibidos:", products.length);
+    
+    // 🔹 DEBUG: Ver estructura de productos
+    if (products.length > 0) {
+      console.log("🔍 Estructura del primer producto:", {
+        id: products[0].id,
+        title: products[0].title,
+        options: products[0].options,
+        variants: products[0].variants?.map((v: any) => ({
+          id: v.id,
+          options: v.options,
+          prices: v.prices
+        })),
+        categories: products[0].categories
+      });
     }
 
-    if (sizeTerm) {
-      const before = products.length;
-      products = products.filter((p) => matchesSize(p, sizeTerm));
-      console.log(`📏 Filtrado size "${sizeTerm}": ${before} → ${products.length}`);
-    }
-
-    console.log("✅ fetchProducts - productos finales devueltos:", products.length);
+    // 🔹 NOTA: El filtrado por color y tamaño se hará en el cliente
+    // para poder manejar correctamente las variantes
+    
     return { ...data, products };
   } catch (err) {
     console.error("🚨 fetchProducts - excepción:", err);

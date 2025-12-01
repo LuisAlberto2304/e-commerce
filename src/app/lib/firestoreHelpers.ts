@@ -9,6 +9,7 @@ interface ExtraUserData {
   nombre?: string;
   apellidoPaterno?: string;
   apellidoMaterno?: string;
+  phoneNumber?: string;
   role?: "buyer" | "seller" | "admin";
   storeName?: string;
 }

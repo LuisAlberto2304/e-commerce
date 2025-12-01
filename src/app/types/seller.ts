@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // types/seller.ts
 export interface SellerProfile {
+  medusaToken: any;
   uid: string;
   email: string;
   name: string;

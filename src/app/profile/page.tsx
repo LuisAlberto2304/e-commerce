@@ -285,7 +285,7 @@ export default function ProfilePage() {
             </Link>
 
             <Link
-              href="/settings"
+              href="/profile/settings"
               className="group bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-gray-300 transition-all duration-300 hover:-translate-y-1"
             >
               <div className="flex items-start gap-4">

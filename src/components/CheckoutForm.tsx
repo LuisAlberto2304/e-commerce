@@ -7,9 +7,6 @@ import AddressForm from "./AddressForm";
 import { Button } from "@/components/Button";
 import { useRouter } from "next/navigation";
 
-// IMPORT REMOVIDO: ya no usamos contexto del carrito
-// import { useCart } from "@/context/CartContext";
-
 export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   const [isGuest, setIsGuest] = useState(true);
   const [formData, setFormData] = useState({
@@ -37,6 +34,10 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   const [tax, setTax] = useState(0);
   const [taxRate, setTaxRate] = useState(0.16);
   const [subtotal, setSubtotal] = useState(0);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  const [showAllErrors, setShowAllErrors] = useState(false);
 
   // --- ADAPTADO: ya no usamos useCart ni sus valores
   // const { subtotal: contextSubtotal, tax: contextTax, total: contextTotal } = useCart();
@@ -183,9 +184,120 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     };
   };
 
+  const markFieldAsTouched = (fieldName: string) => {
+    setTouchedFields(prev => new Set(prev).add(fieldName));
+  };
+
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'fullName':
+        if (!value.trim()) return "El nombre completo es obligatorio";
+        if (value.trim().length < 2) return "El nombre debe tener al menos 2 caracteres";
+        return "";
+      
+      case 'email':
+        if (!value.trim()) return "El email es obligatorio";
+        if (!/\S+@\S+\.\S+/.test(value)) return "El formato del email no es válido";
+        return "";
+      
+      case 'phone':
+        if (!value.trim()) return "El teléfono es obligatorio";
+        if (value.trim().length < 8) return "El teléfono debe tener al menos 8 dígitos";
+        return "";
+      
+      case 'street':
+        if (!value.trim()) return "La dirección es obligatoria";
+        if (value.trim().length < 5) return "La dirección debe ser más específica";
+        return "";
+      
+      case 'city':
+        if (!value.trim()) return "La ciudad es obligatoria";
+        return "";
+      
+      case 'state':
+        if (!value.trim()) return "El estado es obligatorio";
+        return "";
+      
+      case 'postalCode':
+        if (!value.trim()) return "El código postal es obligatorio";
+        return "";
+      
+      case 'country':
+        if (!value.trim()) return "El país es obligatorio";
+        return "";
+      
+      default:
+        return "";
+    }
+  };
+
+  const validateForm = () => {
+      const errors: Record<string, string> = {};
+
+      // Validar campos personales (para guest)
+      if (isGuest) {
+        errors.fullName = validateField('fullName', formData.fullName);
+        errors.email = validateField('email', formData.email);
+        errors.phone = validateField('phone', formData.phone);
+      }
+
+      // Validar dirección
+      errors.street = validateField('street', formData.street);
+      errors.city = validateField('city', formData.city);
+      errors.state = validateField('state', formData.state);
+      errors.postalCode = validateField('postalCode', formData.postalCode);
+      errors.country = validateField('country', formData.country);
+
+      // Filtrar solo los campos con errores
+      const filteredErrors = Object.fromEntries(
+        Object.entries(errors).filter(([_, error]) => error !== "")
+      );
+
+      setFormErrors(filteredErrors);
+      return Object.keys(filteredErrors).length === 0;
+    };
+
+    // ✅ Validar formulario cuando cambien los datos
+    useEffect(() => {
+      const isValid = validateForm();
+      setIsFormValid(isValid);
+    }, [formData, isGuest]);
+
+    const handleChangeWithValidation = (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => {
+      const { name, value } = e.target;
+      
+      // Marcar campo como touched
+      markFieldAsTouched(name);
+      
+      // Actualizar datos del formulario
+      setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
   // ✅ Manejar envío del formulario (NO crear orden en Firebase aquí — mantenemos flujo actual)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+        // Validar antes de enviar
+        // Mostrar todos los errores al intentar enviar
+    setShowAllErrors(true);
+    
+    // Validar antes de enviar
+    if (!validateForm()) {
+      // Scroll al primer error
+      const firstErrorField = document.querySelector('[data-error="true"]');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+      
+      alert("Por favor completa todos los campos obligatorios correctamente.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -220,7 +332,8 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
           shipping_option_id: medusaData.shippingOptionId
         },
         guest: isGuest,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        
       };
 
       console.log("📦 Orden preparada (local):", orderData);
@@ -250,6 +363,11 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+    // ✅ Función helper para saber si mostrar error en un campo
+  const shouldShowError = (fieldName: string): boolean => {
+    return showAllErrors || touchedFields.has(fieldName);
   };
 
   // ✅ Calcular peso total para envío
@@ -311,67 +429,110 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-3">
                         Información personal
+                        <span className="text-red-500 ml-1">*</span>
                       </label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                        <div data-error={!!formErrors.fullName && shouldShowError('fullName')}>
                           <input
                             name="fullName"
                             type="text"
-                            placeholder="Nombre completo"
+                            placeholder="Nombre completo *"
                             value={formData.fullName}
-                            onChange={handleChange}
+                            onChange={handleChangeWithValidation}
+                            onBlur={() => markFieldAsTouched('fullName')}
                             required
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                            className={`w-full px-4 py-3 border rounded-xl 
                                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                                      transition-all duration-200 bg-gray-50 focus:bg-white"
+                                      transition-all duration-200 bg-gray-50 focus:bg-white
+                                      ${formErrors.fullName && shouldShowError('fullName') 
+                                        ? 'border-red-500 ring-2 ring-red-200' 
+                                        : 'border-gray-200'}`}
                           />
+                          {formErrors.fullName && shouldShowError('fullName') && (
+                            <p className="text-red-500 text-sm mt-1 flex items-center">
+                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              {formErrors.fullName}
+                            </p>
+                          )}
                         </div>
-                        <div>
+                        <div data-error={!!formErrors.email && shouldShowError('email')}>
                           <input
                             name="email"
                             type="email"
-                            placeholder="correo@ejemplo.com"
+                            placeholder="correo@ejemplo.com *"
                             value={formData.email}
-                            onChange={handleChange}
+                            onChange={handleChangeWithValidation}
+                            onBlur={() => markFieldAsTouched('email')}
                             required
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                            className={`w-full px-4 py-3 border rounded-xl 
                                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                                      transition-all duration-200 bg-gray-50 focus:bg-white"
+                                      transition-all duration-200 bg-gray-50 focus:bg-white
+                                      ${formErrors.email && shouldShowError('email') 
+                                        ? 'border-red-500 ring-2 ring-red-200' 
+                                        : 'border-gray-200'}`}
                           />
+                          {formErrors.email && shouldShowError('email') && (
+                            <p className="text-red-500 text-sm mt-1 flex items-center">
+                              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              {formErrors.email}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
                     
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2" data-error={!!formErrors.phone && shouldShowError('phone')}>
                       <input
                         name="phone"
                         type="tel"
-                        placeholder="Número de teléfono"
+                        placeholder="Número de teléfono *"
                         value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl 
+                        onChange={handleChangeWithValidation}
+                        onBlur={() => markFieldAsTouched('phone')}
+                        className={`w-full px-4 py-3 border rounded-xl 
                                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                                  transition-all duration-200 bg-gray-50 focus:bg-white"
+                                  transition-all duration-200 bg-gray-50 focus:bg-white
+                                  ${formErrors.phone && shouldShowError('phone') 
+                                    ? 'border-red-500 ring-2 ring-red-200' 
+                                    : 'border-gray-200'}`}
                       />
+                      {formErrors.phone && shouldShowError('phone') && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {formErrors.phone}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
 
                 <AddressForm 
                   formData={formData} 
-                  handleChange={handleChange} 
+                  handleChange={handleChangeWithValidation}
                   onCountryChange={(country: string) => handleCountryChange(country, getTotalWeight())}
+                  formErrors={formErrors}
+                  shouldShowError={shouldShowError}
+                  markFieldAsTouched={markFieldAsTouched}
                 />
 
                 <div className="pt-4">
                   <button
                     data-testid="continue-to-payment"
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold 
-                             py-4 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all 
-                             duration-200 disabled:opacity-50 disabled:cursor-not-allowed 
-                             shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    disabled={isSubmitting || !isFormValid}
+                    className={`w-full bg-gradient-to-r font-semibold 
+                            py-4 px-6 rounded-xl transition-all 
+                            duration-200 disabled:opacity-50 disabled:cursor-not-allowed 
+                            shadow-lg hover:shadow-xl transform hover:-translate-y-0.5
+                            ${isFormValid 
+                              ? 'from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800' 
+                              : 'from-gray-400 to-gray-500 text-gray-200 cursor-not-allowed'}`}
                   >
                     {isSubmitting ? (
                       <div className="flex items-center justify-center">
@@ -380,13 +541,22 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
                       </div>
                     ) : (
                       <div className="flex items-center justify-center">
-                        Continuar al pago
-                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {isFormValid ? 'Continuar al pago' : 'Completa todos los campos'}
+                        <svg className={`w-5 h-5 ml-2 ${isFormValid ? '' : 'opacity-50'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
                     )}
                   </button>
+                  
+                  {!isFormValid && (
+                    <p className="text-center text-sm text-gray-500 mt-3">
+                      <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      Completa todos los campos obligatorios (*) para continuar
+                    </p>
+                  )}
                 </div>
               </form>
             </div>
