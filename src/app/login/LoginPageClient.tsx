@@ -236,13 +236,6 @@ export default function LoginPageClient() {
             </button>
           </div>
 
-          {/* Forgot Password Link */}
-          <div className="text-right pt-2">
-            <Link href="/forgot-password" className="text-sm lg:text-base text-blue-500 hover:text-blue-700 font-medium underline">
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </div>
-
           {/* Submit Button */}
           <div className="pt-4">
             <button
