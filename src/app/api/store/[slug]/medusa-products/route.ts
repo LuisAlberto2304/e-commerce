@@ -6,10 +6,10 @@ import { db } from '@/app/lib/firebaseClient';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> } // CORREGIDO: params directamente como Promise
 ) {
   try {
-    const { slug } = await params;
+    const { slug } = await context.params;
     
     console.log('🔄 Obteniendo productos Medusa para store slug:', slug);
 
