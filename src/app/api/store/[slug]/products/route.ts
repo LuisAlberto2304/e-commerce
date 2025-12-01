@@ -6,12 +6,12 @@ import { db } from '@/app/lib/firebaseClient';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> }
 ) {
   try {
-    console.log('🔍 Iniciando búsqueda para slug:', params);
+    console.log('🔍 Iniciando búsqueda para slug:', context.params);
     
-    const { slug } = await params;
+    const { slug } = await context.params;
     console.log('🔄 Slug recibido:', slug);
 
     if (!slug) {
