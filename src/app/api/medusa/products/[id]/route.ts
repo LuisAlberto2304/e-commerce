@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const ADMIN_KEY = process.env.MEDUSA_ADMIN_API_KEY;
@@ -25,7 +25,8 @@ export async function POST(
       );
     }
 
-    const { id } = context.params;
+    // Ahora los params son una Promise, necesitamos await
+    const { id } = await context.params;
 
     if (!id) {
       return NextResponse.json(
@@ -40,7 +41,7 @@ export async function POST(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${ADMIN_KEY}`,
+        "Authorization": `Bearer ${ADMIN_KEY}`,
       },
       body: JSON.stringify(body),
     });
