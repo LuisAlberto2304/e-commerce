@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const ADMIN_KEY = process.env.MEDUSA_ADMIN_API_KEY;
@@ -25,7 +25,7 @@ export async function POST(
       );
     }
 
-    const id = params.id;
+    const { id } = context.params;
 
     if (!id) {
       return NextResponse.json(
