@@ -14,26 +14,20 @@ const baseCSP =
   "frame-src 'self' https://etianguis-fa446.firebaseapp.com https://accounts.google.com https://js.stripe.com https://www.paypal.com https://www.sandbox.paypal.com https://*.vercel.app; " +
   "object-src 'none'; base-uri 'self'; form-action 'self';";
 
-
 const securityHeaders = [
-  // COOP/COEP — permite popups durante desarrollo
   ...(isDev
     ? [
         { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
       ]
     : [
-        // En producción puedes endurecerlo si no usas popups:
         { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
       ]),
-
-  // CSP
   {
     key: "Content-Security-Policy",
     value: baseCSP,
   },
-
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -46,6 +40,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // 👇 Agregado: evita el error de params con Promises en rutas dinámicas
+    typedRoutes: false,
+  },
+
   async headers() {
     return [
       {
