@@ -656,7 +656,8 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
         quantity: quantity,
         selectedOptions: selectedOptions,
         addedAt: new Date(),
-        status: "active"
+        status: "active",
+        
       };
 
       const cartRef = collection(db, "users", user.uid, "cart");
@@ -787,7 +788,6 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   const breadcrumbItems = [
     { label: 'Inicio', href: '/' },
     { label: 'Productos', href: '/category' },
-    ...(category ? [{ label: category.name, href: `/categorias/${category.id}` }] : []),
     { label: producto?.title || 'Cargando...' },
   ];
 

@@ -1,19 +1,17 @@
-"use client"
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/inline-script-id */
-import { Button } from '../components/Button';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
 import { ProductCard } from '../components/ProductCard';
 import { BannerCarousel } from '../components/Banner';
 import CookieBanner from '../components/CookieBanner';
-import { generateSeoMetadata } from "./lib/seo";
 import Script from 'next/script';
-import { onAuthStateChanged, getAuth } from "firebase/auth";
-import { Auth } from 'firebase/auth';
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { auth } from './lib/firebaseClient';
 import Link from 'next/link';
+import { getNewestProducts, getBestSellingProducts, Product } from '@/app/services/firebaseService';
+import { testFirestore } from "@/app/services/testFirestore";
 
-// 🔹 Datos estructurados para la página principal
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -29,62 +27,15 @@ const structuredData = [
     url: "https://e-tianguis.com",
     logo: "https://e-tianguis.com/logo.png",
   },
-  // Productos destacados
-  {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    itemListElement: [
-      {
-        "@type": "Product",
-        name: "Producto 1",
-        description: "Descripción corta",
-        image: "https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png",
-        sku: "PROD1",
-        offers: {
-          "@type": "Offer",
-          url: "https://e-tianguis.com",
-          priceCurrency: "MXN",
-          price: "10.00",
-          itemCondition: "https://schema.org/NewCondition",
-          availability: "https://schema.org/InStock",
-        },
-      },
-      {
-        "@type": "Product",
-        name: "Producto 2",
-        description: "Descripción corta",
-        image: "https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png",
-        sku: "PROD2",
-        offers: {
-          "@type": "Offer",
-          url: "https://e-tianguis.com",
-          priceCurrency: "MXN",
-          price: "20.00",
-          itemCondition: "https://schema.org/NewCondition",
-          availability: "https://schema.org/InStock",
-        },
-      },
-      {
-        "@type": "Product",
-        name: "Producto 3",
-        description: "Descripción corta",
-        image: "https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png",
-        sku: "PROD3",
-        offers: {
-          "@type": "Offer",
-          url: "https://e-tianguis.com",
-          priceCurrency: "MXN",
-          price: "30.00",
-          itemCondition: "https://schema.org/NewCondition",
-          availability: "https://schema.org/InStock",
-        },
-      },
-    ],
-  },
 ];
+
 
 export default function HomePage() {
   const [user, setUser] = useState<any>(null);
+  const [newestProducts, setNewestProducts] = useState<Product[]>([]);
+  const [bestSellingProducts, setBestSellingProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -93,38 +44,91 @@ export default function HomePage() {
     return () => unsubscribe();
   }, []);
 
-  const products = [
-    { id: 'PROD1', title: 'Producto 1', description: 'Descripción corta', price: '10', img: 'https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png'},
-    { id: 'PROD2', title: 'Producto 2', description: 'Descripción corta', price: '20', img: 'https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png'},
-    { id: 'PROD3', title: 'Producto 3', description: 'Descripción corta', price: '30', img: 'https://d1fufvy4xao6k9.cloudfront.net/feed/img/woman_shirt/1134135/folded.png'},
-  ];
+
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Iniciando carga de productos...');
+      
+      try {
+        const [newest, bestSelling] = await Promise.all([
+          getNewestProducts(6),
+          getBestSellingProducts(6)
+        ]);
+        
+        console.log('✅ Productos cargados:', {
+          newest: newest.length,
+          bestSelling: bestSelling.length
+        });
+        
+        setNewestProducts(newest);
+        setBestSellingProducts(bestSelling);
+        
+        if (newest.length === 0) {
+          setError('No se encontraron productos. Asegúrate de que hay productos publicados en Firebase.');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error en fetchProducts:', error);
+        setError('Error al cargar los productos. Revisa la consola para más detalles.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const banners = [
     {
       title: "Oferta Especial",
       subtitle: "Aprovecha un 30% de descuento.",
-      buttonText: "Comprar ahora",
       imageUrl: "https://png.pngtree.com/png-clipart/20231014/original/pngtree-heap-of-colorful-clothes-mountain-picture-image_13153143.png",
     },
     {
       title: "Nueva Colección",
       subtitle: "Ropa deportiva ya disponible.",
-      buttonText: "Ver colección",
       imageUrl: "https://www.oxiclean.com/-/media/oxiclean/content/product-images/color-shirts.png",
     },
     {
       title: "Ropa para el trabajo",
       subtitle: "Para la chamba",
-      buttonText: "Descubrir",
       imageUrl: "https://www.lakeland.com/wp-content/uploads/hi-vis-vest.png",
     },
   ];
+
+  // Función para formatear el precio
+  const formatPrice = (price: number) => {
+    // Si el precio es muy alto, probablemente está en centavos
+    if (price > 1000) {
+      return (price / 100).toFixed(2);
+    }
+    return price.toFixed(2);
+  };
+
+    useEffect(() => {
+    testFirestore();
+  }, []);
+
+  // Estado de carga mejorado
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brown mx-auto mb-4"></div>
+          <p className="text-text text-lg">Buscando productos...</p>
+          <p className="text-gray-500 text-sm mt-2">Revisando todas las tiendas</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <section>
         <BannerCarousel items={banners} />
-
         {/* 🔹 Bloque de bienvenida si NO hay sesión */}
         {!user && (
           <div className="bg-white text-black p-6 text-center rounded-xl mx-auto mt-6 w-[90%] md:w-[70%] shadow-sm">
@@ -147,36 +151,93 @@ export default function HomePage() {
           </div>
         )}
 
-        <h2 className="text-6xl text-center font-heading text-text mb-10 mt-10">
-          Productos destacados
-        </h2>
-
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 justify-items-center">
-            {products.map((product) => (
-              <div key={product.id} className="w-full max-w-[280px]">
-                <ProductCard
-                  id={product.id}
-                  title={product.title}
-                  description={product.description}
-                  price={product.price}
-                  imageUrl={product.img}
-                />
-              </div>
-            ))}
+        {/* 🔹 Mensaje de error */}
+        {error && (
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-6 rounded-xl mx-auto mt-6 w-[90%] md:w-[70%]">
+            <h3 className="text-lg font-semibold mb-2">Aviso</h3>
+            <p>{error}</p>
+            <p className="text-sm mt-2">Abre la consola del navegador (F12) para ver logs detallados.</p>
           </div>
+        )}
+
+        {/* 🔹 Productos más nuevos */}
+        <div className="mt-16">
+          <h2 className="text-4xl md:text-6xl text-center font-heading text-text mb-10">
+            Productos Más Nuevos
+          </h2>
+          
+          {newestProducts.length > 0 ? (
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 justify-items-center">
+                {newestProducts.map((product) => (
+                  <div key={`${product.store_id}-${product.id}`} className="w-full max-w-[300px]">
+                    <ProductCard
+                      id={product.id}
+                      title={product.title}
+                      description={product.description}
+                      price={formatPrice(product.price)}
+                      imageUrl={product.thumbnail}
+                    />
+                    <div className="text-xs text-gray-500 mt-2">
+                      Creado: {new Date(product.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No se encontraron productos nuevos.</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Verifica que haya productos publicados en Firebase Firestore.
+              </p>
+            </div>
+          )}
         </div>
+          {/* 🔹 Productos más vendidos (temporalmente iguales) */}
+          <div className="mt-16">
+            <h2 className="text-4xl md:text-6xl text-center font-heading text-text mb-10">
+              Productos Destacados
+            </h2>
+
+            {bestSellingProducts.length > 0 ? (
+              <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 justify-items-center">
+                  {bestSellingProducts.map((product) => (
+                    <div key={`best-${product.store_id}-${product.id}`} className="w-full max-w-[300px]">
+                      <ProductCard
+                        id={product.id}
+                        title={product.title}
+                        description={product.description}
+                        price={formatPrice(product.price)}
+                        imageUrl={product.thumbnail}
+                      />
+
+                      <div className="text-xs text-gray-500 mt-2">
+                        Vendidos: {product.totalSold ?? 0}
+                      </div>
+
+                      <div className="text-xs text-gray-400">
+                        Última venta: {product.lastSell ? new Date(product.lastSell).toLocaleDateString() : "-"}
+                      </div>
+
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No se encontraron productos destacados.</p>
+              </div>
+            )}
+          </div>
       </section>
 
-      
-
-      {/* 🔹 Insertar JSON-LD */}
       <Script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      {/* Agregar cookie baner al final */}
       <CookieBanner 
         facebookPixelId={process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID}
         gaMeasurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}

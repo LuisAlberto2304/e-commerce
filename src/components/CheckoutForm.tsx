@@ -332,7 +332,8 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
           shipping_option_id: medusaData.shippingOptionId
         },
         guest: isGuest,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        
       };
 
       console.log("📦 Orden preparada (local):", orderData);

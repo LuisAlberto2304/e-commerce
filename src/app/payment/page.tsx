@@ -23,6 +23,9 @@ import {
   calculateCartTotals 
 } from "../lib/firebaseCart";
 import router from "next/router";
+import { collection, addDoc, doc, setDoc, updateDoc } from "firebase/firestore";
+import { db } from "../lib/firebaseClient";
+import { updateProductStats } from "../lib/updateProductStats";
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
@@ -336,7 +339,7 @@ export default function PaymentPage() {
       const paymentPrep = JSON.parse(localStorage.getItem("payment-preparation") || "{}");
       const currentOrder = JSON.parse(localStorage.getItem("currentOrder") || "{}");
       const { customerEmail, shippingAddress, shippingOptionId } = paymentPrep;
-      const { shipping, shippingMethod } = currentOrder; 
+      const { shipping, shippingMethod, subtotal, tax, taxRate, items: cartItems } = currentOrder; 
 
       console.log("💿 Datos cargados desde localStorage:", paymentPrep);
 
@@ -391,30 +394,113 @@ export default function PaymentPage() {
         return;
       }
 
-      // Guardar en Firebase
+      // 🔥 NUEVO: Guardar orden COMPLETA en Firebase con estructura para vendedores
       try {
-        console.log("🧾 Guardando orden en Firestore...");
+        console.log("🧾 Guardando orden COMPLETA en Firestore...");
 
+        // Generar número de orden
+        const generateOrderNumber = () => {
+          const timestamp = Date.now().toString().slice(-6);
+          const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+          return `ORD-${timestamp}${random}`;
+        };
+
+        const orderNumber = generateOrderNumber();
+
+        // Preparar items con información de vendedor
+        const orderItems = cartItems.map((item: any) => ({
+          id: item.variantId,
+          addedAt: item.addedAt || new Date(),
+          image: item.image,
+          ownerId: item.ownerId,
+          price: item.price,
+          productId: item.productId,
+          quantity: item.quantity,
+          selectedOptions: item.selectedOptions || {},
+          status: "active",
+          title: item.title,
+          variantDescription: item.variantDescription,
+          variantId: item.variantId,
+          
+          // 🔥 CAMPOS CRÍTICOS PARA VENDEDORES
+          sellerId: item.sellerId || item.ownerId, // ID del vendedor
+          productName: item.title,
+          variantTitle: item.variantTitle || Object.values(item.selectedOptions || {}).join(' • '),
+        }));
+
+        // Estructura COMPLETA de la orden
         const orderData = {
-          userId: user?.uid || "guest",
+          // Información de dirección
+          address: {
+            address_1: shippingAddress.address_1 || shippingAddress.street,
+            city: shippingAddress.city,
+            country_code: shippingAddress.country_code || 'MX',
+            first_name: shippingAddress.first_name,
+            last_name: shippingAddress.last_name,
+            phone: shippingAddress.phone,
+            postal_code: shippingAddress.postal_code,
+            province: shippingAddress.province
+          },
+          
+          // Información de la orden
+          createdAt: new Date(),
           email: customerEmail,
-          items: cart,
-          total,
-          status: "paid",
-          address: shippingAddress,
+          firebaseCreated: new Date().toISOString(),
+          items: orderItems,
+          
+          // Identificadores
           medusaCartId: cartId,
-          shippingMethod: shippingMethod.toLowerCase(),
-          shippingCost: shipping || 0, 
-          payment_method: paymentMethod,
+          orderNumber: orderNumber,
+          
+          // Información de pago
           payment_intent_id: paymentIntentId,
           paypal_capture_id: paypalCaptureId,
-          createdAt: new Date().toISOString(),
+          payment_method: paymentMethod,
+          
+          // Envío
+          shippingCost: shipping || 0,
+          shippingMethod: shippingMethod?.toLowerCase() || "estándar",
+          
+          // Estados
+          status: "paid",
+          paymentStatus: "paid",
+          
+          // Totales
+          subtotal: subtotal || cartTotals.subtotal,
+          tax: tax || cartTotals.tax,
+          total: total,
+          
+          // Información del usuario
+          userId: user?.uid || "guest",
+          
+          updatedAt: new Date()
         };
 
         const cleanedOrder = cleanObject(orderData);
-        await saveOrder(cleanedOrder);
 
-        console.log("✅ Orden guardada correctamente en Firestore");
+        // 🔥 GUARDAR ORDEN PRINCIPAL
+        const orderRef = await addDoc(collection(db, "orders"), cleanedOrder);
+        console.log("✅ Orden principal guardada en Firestore:", orderRef.id);
+
+        await updateProductStats(orderItems);
+        console.log("📈 productStats actualizado correctamente");
+        // 🔥 CREAR ÓRDENES POR VENDEDOR
+        await createSellerOrderItems(cleanedOrder, orderRef.id);
+
+        // 🔥 CREAR REFERENCIA EN USUARIO (si está loggeado)
+        if (user?.uid) {
+          const userOrderRef = doc(db, "users", user.uid, "orders", orderRef.id);
+          await setDoc(userOrderRef, {
+            orderId: orderRef.id,
+            orderNumber: orderNumber,
+            createdAt: new Date(),
+            status: "paid",
+            total: total,
+            itemsCount: orderItems.length
+          });
+        }
+
+        console.log("✅ Orden COMPLETA guardada correctamente en Firestore");
 
         // Limpiar carrito de Firebase después de la compra exitosa
         if (user?.uid) {
@@ -442,6 +528,60 @@ export default function PaymentPage() {
     }
   };
 
+  // 🔥 FUNCIÓN PARA CREAR ÓRDENES POR VENDEDOR
+const createSellerOrderItems = async (orderData: any, orderId: string) => {
+  try {
+    // Agrupar items por vendedor
+    const itemsBySeller: { [key: string]: any[] } = {};
+    
+    orderData.items.forEach((item: any) => {
+      const sellerId = item.sellerId;
+      if (!itemsBySeller[sellerId]) {
+        itemsBySeller[sellerId] = [];
+      }
+      itemsBySeller[sellerId].push(item);
+    });
+    
+    // Crear documentos por vendedor
+    const promises = Object.entries(itemsBySeller).map(async ([sellerId, items]) => {
+      try {
+        const sellerOrderRef = doc(db, "sellers", sellerId, "orders", orderId);
+        
+        const sellerOrder = {
+          orderId: orderId,
+          orderNumber: orderData.orderNumber,
+          customerId: orderData.userId,
+          customerInfo: {
+            firstName: orderData.address.first_name,
+            lastName: orderData.address.last_name,
+            email: orderData.email,
+            phone: orderData.address.phone
+          },
+          items: items,
+          orderTotal: items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
+          shippingAddress: orderData.address,
+          shippingCost: orderData.shippingCost,
+          status: "paid",
+          paymentStatus: "paid",
+          orderDate: orderData.createdAt,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await setDoc(sellerOrderRef, sellerOrder);
+        console.log(`✅ Orden creada para vendedor ${sellerId}:`, orderId);
+      } catch (error) {
+        console.error(`❌ Error creando orden para vendedor ${sellerId}:`, error);
+      }
+    });
+    
+    await Promise.all(promises);
+    console.log("✅ Todas las órdenes de vendedores creadas correctamente");
+  } catch (error) {
+    console.error("❌ Error en createSellerOrderItems:", error);
+    throw error;
+  }
+};
 
 
   if (!order) return null;

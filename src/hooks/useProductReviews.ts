@@ -16,6 +16,13 @@ export const useProductReviews = (productId: string) => {
   const [reviews, setReviews] = useState<ReviewWithId[]>([]);
   const [averageRating, setAverageRating] = useState(0);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingDistribution, setRatingDistribution] = useState({
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eligibility, setEligibility] = useState<ReviewEligibility>({
@@ -36,9 +43,19 @@ export const useProductReviews = (productId: string) => {
         id: review.id || `temp-${Date.now()}-${Math.random()}`
       }));
       
+      // Calcular distribución de ratings
+      const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      reviewsWithId.forEach(review => {
+        if (review.rating >= 1 && review.rating <= 5) {
+          distribution[review.rating as keyof typeof distribution]++;
+        }
+      });
+      
       setReviews(reviewsWithId);
       setAverageRating(stats.averageRating);
       setTotalReviews(stats.totalReviews);
+      setRatingDistribution(distribution);
+      
     } catch (err) {
       setError('Error al cargar las reseñas');
       console.error(err);
@@ -104,6 +121,7 @@ export const useProductReviews = (productId: string) => {
     reviews,
     averageRating,
     totalReviews,
+    ratingDistribution,
     loading,
     error,
     eligibility,

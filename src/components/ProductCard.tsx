@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
-
+import { useProductCardRating } from "@/hooks/useProductCardRating";
 
 export type CardProps = {
   id: string;
@@ -17,29 +17,76 @@ export type CardProps = {
   originalPrice?: number; 
   onAddToCart?: () => void;
   label?: string;
-  rating?: number;
-  reviewCount?: number;
+  rating?: number; // 🔹 Rating individual (puede venir del producto)
+  reviewCount?: number; // 🔹 Contador de reviews individual
   className?: string;
   priority?: boolean; // 🔹 Nueva prop para imágenes prioritarias
+  variants?: number;
+  showRating?: boolean; // 🔹 Controla si se muestra el rating
+  useFirebaseStats?: boolean; // 🔹 Si debe obtener stats desde Firebase
 };
 
-// 🔹 Componente de estrellas memoizado
-const StarRating = memo(({ rating, reviewCount }: { rating: number; reviewCount: number }) => (
-  <div className="flex items-center space-x-1 mb-2">
-    {[1, 2, 3, 4, 5].map(star => (
-      <Star
-        key={star}
-        size={14}
-        className={star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"}
-      />
-    ))}
-    {reviewCount > 0 && (
-      <span className="text-xs text-gray-600 ml-1">({reviewCount})</span>
-    )}
-  </div>
-));
+// 🔹 Componente de estrellas CORREGIDO
+const StarRating = memo(({ 
+  rating, 
+  reviewCount,
+  showReviewCount = true,
+  showAverage = true 
+}: { 
+  rating: number;
+  reviewCount: number;
+  showReviewCount?: boolean;
+  showAverage?: boolean;
+}) => {
+  // Validar que el rating esté entre 0-5
+  const normalizedRating = Math.min(Math.max(rating, 0), 5);
+  const roundedRating = Math.round(normalizedRating * 2) / 2; // Para medias estrellas
+  
+  return (
+    <div className="flex items-center space-x-2 mb-2">
+      {/* Estrellas */}
+      <div className="flex items-center space-x-0.5">
+        {[1, 2, 3, 4, 5].map(star => (
+          <Star
+            key={star}
+            size={14}
+            className={
+              star <= roundedRating 
+                ? "text-yellow-400 fill-current" 
+                : star - 0.5 <= roundedRating 
+                ? "text-yellow-400 fill-current opacity-80" 
+                : "text-gray-300"
+            }
+          />
+        ))}
+      </div>
+      
+      {/* Información de rating */}
+      <div className="flex items-center space-x-1">
+        {showAverage && normalizedRating > 0 && (
+          <span className="text-sm font-medium text-gray-900">
+            {normalizedRating.toFixed(1)}
+          </span>
+        )}
+        {showReviewCount && reviewCount > 0 && (
+          <span className="text-xs text-gray-600">
+            ({reviewCount})
+          </span>
+        )}
+        
+        {/* 🔹 Mostrar mensaje si no hay reviews */}
+        {showReviewCount && reviewCount === 0 && (
+          <span className="text-xs text-gray-400">
+            Sin reseñas
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
 
 StarRating.displayName = 'StarRating';
+
 
 // 🔹 Componente de imagen optimizado
 const ProductImage = memo(({ 
@@ -126,11 +173,22 @@ export const ProductCard: React.FC<CardProps> = memo(({
   reviewCount = 0,
   onAddToCart,
   className = "",
-  priority = false
+  priority = false,
+  variants,
+  showRating = true, // 🔹 Nueva prop para controlar visibilidad
+  useFirebaseStats = false, // 🔹 Nueva prop para usar Firebase stats
 }) => {
 
   const { addToCart } = useCart();
+  const { 
+    rating: firebaseRating, 
+    reviewCount: firebaseReviewCount,
+    loading: ratingLoading 
+  } = useProductCardRating(id, useFirebaseStats);
 
+  // 🔹 Determinar qué datos de rating usar
+  const displayRating = useFirebaseStats ? firebaseRating : rating;
+  const displayReviewCount = useFirebaseStats ? firebaseReviewCount : reviewCount;
 
   // 🔹 Handler memoizado para evitar re-renders
     const handleAddToCart = useCallback((e: React.MouseEvent) => {
@@ -156,7 +214,7 @@ export const ProductCard: React.FC<CardProps> = memo(({
     ? `${description.substring(0, 100)}...` 
     : description;
 
-  return (
+    return (
     <Link
       href={`/products/${id}`}
       className="group block w-full focus:outline-none"
@@ -168,13 +226,37 @@ export const ProductCard: React.FC<CardProps> = memo(({
         {/* Imagen */}
         <div className="relative overflow-hidden">
           <ProductImage imageUrl={imageUrl} title={title} label={label} priority={priority} />
-          {/* 🔹 Efecto de overlay al pasar el mouse */}
           <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </div>
 
         {/* Contenido */}
         <div className="p-4 flex flex-col justify-between min-h-[200px]">
-          {rating > 0 && <StarRating rating={rating} reviewCount={reviewCount} />}
+          {/* 🔹 Mostrar rating solo si showRating es true y hay datos */}
+          {showRating && (
+            <>
+              {ratingLoading && useFirebaseStats ? (
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="flex space-x-0.5">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <Star
+                        key={star}
+                        size={14}
+                        className="text-gray-200"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-400">Cargando...</span>
+                </div>
+              ) : (
+                <StarRating 
+                  rating={displayRating} 
+                  reviewCount={displayReviewCount} 
+                  showReviewCount={true}
+                  showAverage={true}
+                />
+              )}
+            </>
+          )}
 
           <h2 className="text-lg text-center font-semibold text-gray-900 line-clamp-2 mb-1 group-hover:text-brown transition-colors">
             {title}
