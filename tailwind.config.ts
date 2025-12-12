@@ -1,4 +1,3 @@
-// tailwind.config.ts - CORREGIDO
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -41,7 +40,6 @@ module.exports = {
         16: "var(--space-16)",
       },
       screens: {
-        // CONVERTIR a px o usar valores estándar
         'xs': '475px',      // 30rem = 480px → 475px
         'sm': '640px',      // 40rem = 640px
         'md': '768px',      // 48rem = 768px  

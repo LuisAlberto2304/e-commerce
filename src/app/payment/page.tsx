@@ -467,8 +467,8 @@ export default function PaymentPage() {
           
           // Totales
           subtotal: subtotal || cartTotals.subtotal,
-          tax: tax || cartTotals.tax,
-          total: total,
+          tax: totalTax,
+          total: totalWithTax,
           
           // Información del usuario
           userId: user?.uid || "guest",

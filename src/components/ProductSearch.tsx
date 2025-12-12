@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import algoliasearch from "algoliasearch/lite";
-import { Search, X } from "lucide-react"; // Ícono moderno
+import { Search, X } from "lucide-react"; 
 
 const client = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID!,

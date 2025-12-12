@@ -94,7 +94,6 @@ export async function fetchProducts(filters: {
   const baseUrl = getBaseUrl();
   const params = new URLSearchParams();
 
-  // 🔹 Solo parámetros básicos para la API - NO incluir color/size aquí
   if (filters.categoryIds?.length) {
     params.append("categoryIds", filters.categoryIds.join(","));
   } else if (filters.categoryId) {
@@ -107,7 +106,6 @@ export async function fetchProducts(filters: {
   params.append("limit", String(filters.limit ?? 200));
   params.append("offset", String(filters.offset ?? 0));
   
-  // 🔹 IMPORTANTE: Expandir todas las relaciones necesarias
   params.append("expand", "variants,variants.options,variants.prices,options,options.values,categories,tags");
 
   const url = `${baseUrl}/api/products?${params.toString()}`;
@@ -128,7 +126,7 @@ export async function fetchProducts(filters: {
 
     console.log("✅ fetchProducts - productos recibidos:", products.length);
     
-    // 🔹 DEBUG: Ver estructura de productos
+    // DEBUG: Ver estructura de productos
     if (products.length > 0) {
       console.log("🔍 Estructura del primer producto:", {
         id: products[0].id,
@@ -142,9 +140,6 @@ export async function fetchProducts(filters: {
         categories: products[0].categories
       });
     }
-
-    // 🔹 NOTA: El filtrado por color y tamaño se hará en el cliente
-    // para poder manejar correctamente las variantes
     
     return { ...data, products };
   } catch (err) {

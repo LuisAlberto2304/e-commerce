@@ -6,9 +6,11 @@ import Link from "next/link";
 import AddressForm from "./AddressForm";
 import { Button } from "@/components/Button";
 import { useRouter } from "next/navigation";
+import { useFirestoreUser } from "@/hooks/useUserData";
 
 export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   const [isGuest, setIsGuest] = useState(true);
+  const { userData, loading, isAuthenticated } = useFirestoreUser();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -38,6 +40,18 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   const [isFormValid, setIsFormValid] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [showAllErrors, setShowAllErrors] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && userData && !loading) {
+      setFormData(prev => ({
+        ...prev,
+        // Solo actualizamos los 3 campos que nos interesan
+        fullName: userData.fullName || userData.name || '',
+        email: userData.email || prev.email, // Preferimos el email de Firestore
+        phone: userData.phone || userData.phoneNumber || userData.mobile || '',
+      }));
+    }
+  }, [isAuthenticated, userData, loading]);
 
   // --- ADAPTADO: ya no usamos useCart ni sus valores
   // const { subtotal: contextSubtotal, tax: contextTax, total: contextTotal } = useCart();
@@ -189,6 +203,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
   };
 
   const validateField = (name: string, value: string): string => {
+    const stringValue = value || '';
     switch (name) {
       case 'fullName':
         if (!value.trim()) return "El nombre completo es obligatorio";
@@ -201,8 +216,9 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
         return "";
       
       case 'phone':
-        if (!value.trim()) return "El teléfono es obligatorio";
-        if (value.trim().length < 8) return "El teléfono debe tener al menos 8 dígitos";
+        if (!stringValue.trim()) return "El teléfono es obligatorio";
+        if (stringValue.trim().length < 8) return "El teléfono debe tener al menos 8 dígitos";
+        if (stringValue.trim().length > 10) return "El teléfono debe tener menos de 10 dígitos";
         return "";
       
       case 'street':
@@ -490,7 +506,7 @@ export default function CheckoutForm({ cartItems }: { cartItems: any[] }) {
                         name="phone"
                         type="tel"
                         placeholder="Número de teléfono *"
-                        value={formData.phone}
+                        value={formData.phone || ''}
                         onChange={handleChangeWithValidation}
                         onBlur={() => markFieldAsTouched('phone')}
                         className={`w-full px-4 py-3 border rounded-xl 

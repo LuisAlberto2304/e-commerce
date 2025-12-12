@@ -111,7 +111,7 @@ const ProductImage = memo(({
       <Image
         src={imageUrl}
         alt={title}
-        width={300}  // 🔹 Reducido para mejor performance
+        width={300} 
         height={300}
         className="w-full h-full object-cover rounded-lg transition-transform hover:scale-105"
         placeholder="blur" 
