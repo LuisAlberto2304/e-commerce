@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    console.log("Llamando a Medusa Categories...");
+    // console.log("Llamando a Medusa Categories...");
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/store/product-categories`, {
-    headers: {
+      headers: {
         "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_API_KEY!,
         "Content-Type": "application/json",
-    },
+      },
     });
 
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json();
-    console.log("Datos recibidos:", data);
+    // console.log("Datos recibidos:", data);
     return NextResponse.json(data.product_categories);
   } catch (err) {
     console.error("Excepción:", err);

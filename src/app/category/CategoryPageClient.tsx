@@ -1,93 +1,80 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import FiltersSidebar from "@/components/FiltersSidebar";
 import ProductGridWithFilters from "@/components/ProductGridWithFilters";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Filters } from "@/app/types/filters";
 
+import {
+  extractColorsFromVariantTitle,
+  extractColorsFromText,
+  normalizeColors,
+  normalizeSizes,
+  extractSizesFromText
+} from "@/utils/productUtils";
+
 export default function CategoryPageClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [filters, setFilters] = useState<Filters>({});
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [allProducts, setAllProducts] = useState<any[]>([]); // Estado para productos
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Aplicar debounce a la búsqueda (300ms de delay)
+
+  // Inicializar filtros desde URL
+  const [filters, setFilters] = useState<Filters>(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const initialFilters: Filters = {};
+
+    if (params.get("q")) initialFilters.q = params.get("q") || undefined;
+    if (params.get("category")) initialFilters.categories = params.get("category")?.split(",") || undefined;
+    if (params.get("size")) initialFilters.size = params.get("size")?.split(",") || undefined;
+    if (params.get("color")) initialFilters.color = params.get("color")?.split(",") || undefined;
+    if (params.get("minPrice")) initialFilters.minPrice = Number(params.get("minPrice"));
+    if (params.get("maxPrice")) initialFilters.maxPrice = Number(params.get("maxPrice"));
+
+    return initialFilters;
+  });
+
+  const [searchTerm, setSearchTerm] = useState(filters.q || '');
+
+  // Aplicar debounce a la búsqueda
   const debouncedSearchTerm = useDebounce(searchTerm, 800);
 
-    // Actualizar filters.q cuando el debounced search term cambie
+  // Sincronizar URL cuando cambian los filtros
   useEffect(() => {
-    setFilters(prev => ({
-      ...prev,
-      q: debouncedSearchTerm.trim() || undefined
-    }));
+    const params = new URLSearchParams();
+
+    if (filters.q) params.set("q", filters.q);
+    if (filters.categories?.length) params.set("category", filters.categories.join(","));
+    if (filters.size?.length) params.set("size", filters.size.join(","));
+    if (filters.color?.length) params.set("color", filters.color.join(","));
+    if (filters.minPrice) params.set("minPrice", String(filters.minPrice));
+    if (filters.maxPrice) params.set("maxPrice", String(filters.maxPrice));
+
+    const newQuery = params.toString();
+    const currentQuery = searchParams.toString();
+
+    if (newQuery !== currentQuery) {
+      router.replace(`?${newQuery}`, { scroll: false });
+    }
+  }, [filters, router, searchParams]);
+
+  // Actualizar filters.q cuando el debounced search term cambie
+  useEffect(() => {
+    setFilters(prev => {
+      const newQuery = debouncedSearchTerm.trim() || undefined;
+      if (prev.q === newQuery) return prev;
+      return { ...prev, q: newQuery };
+    });
   }, [debouncedSearchTerm]);
 
   // Función para manejar cambios en la búsqueda
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-  };
-
-    const extractColorsFromVariantTitle = (text: string): string[] => {
-    if (!text) return [];
-    const colors: string[] = [];
-    const pattern = /\b(XS|S|M|L|XL|XXL|XXXL)\s*[\/\-]\s*([A-Za-z\s]+)/gi;
-    const matches = text.matchAll(pattern);
-    
-    for (const match of matches) {
-      if (match[2]) {
-        const color = match[2].trim();
-        const normalizedColor = color.charAt(0).toUpperCase() + color.slice(1).toLowerCase();
-        if (!colors.includes(normalizedColor)) {
-          colors.push(normalizedColor);
-        }
-      }
-    }
-
-    
-    
-    const standaloneColors = extractColorsFromText(text);
-    standaloneColors.forEach(color => {
-      if (!colors.includes(color)) {
-        colors.push(color);
-      }
-    });
-    
-    return colors;
-  };
-
-    const translateColor = (color: string): string => {
-    const colorMap: { [key: string]: string } = {
-      'Red': 'Rojo', 'Blue': 'Azul', 'Green': 'Verde', 'Yellow': 'Amarillo',
-      'Black': 'Negro', 'White': 'Blanco', 'Gray': 'Gris', 'Grey': 'Gris',
-      'Pink': 'Rosa', 'Purple': 'Morado', 'Orange': 'Naranja', 'Brown': 'Marrón', 'Beige': 'Beige'
-    };
-    return colorMap[color] || color;
-  };
-
-  const extractColorsFromText = (text: string): string[] => {
-    if (!text) return [];
-    const colors: string[] = [];
-    const colorPatterns = [
-      /\b(ROJO|AZUL|VERDE|AMARILLO|NEGRO|BLANCO|GRIS|ROSA|MORADO|NARANJA|MARRÓN|BEIGE|CAFE|MARRON)\b/gi,
-      /\b(RED|BLUE|GREEN|YELLOW|BLACK|WHITE|GRAY|PINK|PURPLE|ORANGE|BROWN|BEIGE)\b/gi,
-    ];
-
-    colorPatterns.forEach(pattern => {
-      const matches = text.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          const normalizedColor = match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
-          const translatedColor = translateColor(normalizedColor);
-          if (!colors.includes(translatedColor)) {
-            colors.push(translatedColor);
-          }
-        });
-      }
-    });
-    return colors;
   };
 
 
@@ -100,12 +87,12 @@ export default function CategoryPageClient() {
     // El filtro por búsqueda ahora usa debouncedSearchTerm indirectamente a través de filters.q
     if (filters.q) {
       const query = filters.q.toLowerCase();
-      console.log(`🔍 Aplicando filtro de búsqueda: "${query}"`);
-      
-      filtered = filtered.filter(product => 
+      // console.log(`🔍 Aplicando filtro de búsqueda: "${query}"`);
+
+      filtered = filtered.filter(product =>
         product.title.toLowerCase().includes(query) ||
         product.description?.toLowerCase().includes(query) ||
-        product.variants?.some((variant: any) => 
+        product.variants?.some((variant: any) =>
           variant.sku?.toLowerCase().includes(query)
         )
       );
@@ -113,8 +100,8 @@ export default function CategoryPageClient() {
 
     // ... resto de tus filtros (categorías, color, tamaño)
     if (filters.categories?.length) {
-      filtered = filtered.filter(product => 
-        product.categories?.some((cat: any) => 
+      filtered = filtered.filter(product =>
+        product.categories?.some((cat: any) =>
           filters.categories?.includes(cat.id)
         )
       );
@@ -124,7 +111,7 @@ export default function CategoryPageClient() {
       filtered = filtered.filter(product => {
         return product.variants?.some((variant: any) => {
           const variantTitle = variant.title?.toLowerCase() || '';
-          return filters.size?.some(size => 
+          return filters.size?.some(size =>
             variantTitle.includes(size.toLowerCase())
           );
         });
@@ -136,13 +123,13 @@ export default function CategoryPageClient() {
         return product.variants?.some((variant: any) => {
           const variantTitle = variant.title || '';
           const variantSku = variant.sku || '';
-          
+
           const colorsInTitle = extractColorsFromVariantTitle(variantTitle);
           const colorsInSku = extractColorsFromText(variantSku);
           const allColors = [...colorsInTitle, ...colorsInSku];
-          
-          return filters.color?.some(filterColor => 
-            allColors.some(productColor => 
+
+          return filters.color?.some(filterColor =>
+            allColors.some(productColor =>
               productColor.toLowerCase() === filterColor.toLowerCase()
             )
           );
@@ -156,7 +143,7 @@ export default function CategoryPageClient() {
   // Función para extraer opciones únicas (similar a la que tienes en ProductGridWithFilters)
   const getUniqueVariantOptions = (optionName: string): string[] => {
     const options = new Set<string>();
-    
+
     allProducts.forEach((product) => {
       if (product.variants && Array.isArray(product.variants)) {
         product.variants.forEach((variant: any) => {
@@ -175,7 +162,7 @@ export default function CategoryPageClient() {
             colors.forEach(color => {
               if (color) options.add(color);
             });
-            
+
             const colorsFromSku = extractColorsFromText(variantSku);
             colorsFromSku.forEach(color => {
               if (color) options.add(color);
@@ -184,98 +171,29 @@ export default function CategoryPageClient() {
         });
       }
     });
-    
+
     const rawResults = Array.from(options);
-    
+
     if (optionName === 'color') {
       return normalizeColors(rawResults);
     }
-    
+
     if (optionName === 'size') {
       return normalizeSizes(rawResults);
     }
-    
+
     return rawResults.sort();
   };
 
-  // Funciones auxiliares (las mismas que en ProductGridWithFilters)
-  const extractSizesFromText = (text: string): string[] => {
-    if (!text) return [];
-    const sizes: string[] = [];
-    const sizePatterns = [
-      /\b(XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL)\b/gi,
-      /\b(ONESIZE|ONE SIZE|UNICA TALLA|TALLA ÚNICA|UNICA)\b/gi,
-      /\b(\d+(?:\.\d+)?[Mm]?[Ll]?)\b/g,
-    ];
-
-    sizePatterns.forEach(pattern => {
-      const matches = text.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          const size = match.toUpperCase().trim();
-          let normalizedSize = size;
-          if (size === 'ONESIZE' || size === 'ONE SIZE' || size === 'UNICA TALLA' || size === 'TALLA ÚNICA' || size === 'UNICA') {
-            normalizedSize = 'Talla Única';
-          }
-          if (!sizes.includes(normalizedSize)) {
-            sizes.push(normalizedSize);
-          }
-        });
-      }
-    });
-    return sizes;
-  };
-
-  const normalizeColors = (colors: string[]): string[] => {
-    const colorMap: { [key: string]: string } = {
-      'black': 'Negro', 'white': 'Blanco', 'red': 'Rojo', 'blue': 'Azul',
-      'green': 'Verde', 'yellow': 'Amarillo', 'gray': 'Gris', 'grey': 'Gris',
-      'pink': 'Rosa', 'purple': 'Morado', 'orange': 'Naranja', 'brown': 'Marrón', 'beige': 'Beige'
-    };
-    const normalized = new Set<string>();
-    colors.forEach(color => {
-      const lowerColor = color.toLowerCase();
-      const translated = colorMap[lowerColor] || color;
-      const finalColor = translated.charAt(0).toUpperCase() + translated.slice(1).toLowerCase();
-      normalized.add(finalColor);
-    });
-    return Array.from(normalized).sort();
-  };
-
-  const normalizeSizes = (sizes: string[]): string[] => {
-    const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Talla Única'];
-    const numericSizes: string[] = [];
-    const standardSizes: string[] = [];
-    
-    sizes.forEach(size => {
-      if (/^\d+$/.test(size)) {
-        numericSizes.push(size);
-      } else {
-        standardSizes.push(size);
-      }
-    });
-    
-    numericSizes.sort((a, b) => parseInt(a) - parseInt(b));
-    standardSizes.sort((a, b) => {
-      const indexA = sizeOrder.indexOf(a);
-      const indexB = sizeOrder.indexOf(b);
-      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-      return a.localeCompare(b);
-    });
-    
-    return [...standardSizes, ...numericSizes];
-  };
 
   // Calcular opciones disponibles
-  const availableColors = useMemo(() => 
-    getUniqueVariantOptions('color'), 
+  const availableColors = useMemo(() =>
+    getUniqueVariantOptions('color'),
     [allProducts]
   );
 
-  const availableSizes = useMemo(() => 
-    getUniqueVariantOptions('size'), 
+  const availableSizes = useMemo(() =>
+    getUniqueVariantOptions('size'),
     [allProducts]
   );
 
@@ -285,7 +203,7 @@ export default function CategoryPageClient() {
       try {
         const res = await fetch("/api/categories");
         const data = await res.json();
-        
+
         if (Array.isArray(data)) {
           setCategories(data);
         } else {
@@ -306,8 +224,8 @@ export default function CategoryPageClient() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
-      <FiltersSidebar 
-        categories={categories} 
+      <FiltersSidebar
+        categories={categories}
         filters={filters}
         searchTerm={searchTerm} // Pasar searchTerm separado
         onSearchChange={handleSearchChange}
@@ -316,8 +234,8 @@ export default function CategoryPageClient() {
         availableSizes={availableSizes}
       />
       <main className="flex-1 p-6">
-        <ProductGridWithFilters 
-          filters={filters} 
+        <ProductGridWithFilters
+          filters={filters}
           setFilters={setFilters}
           onProductsLoad={setAllProducts} // Nueva prop para pasar los productos
         />

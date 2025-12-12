@@ -17,13 +17,13 @@ const baseCSP =
 const securityHeaders = [
   ...(isDev
     ? [
-        { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
-        { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
-      ]
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+      { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
+    ]
     : [
-        { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
-        { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
-      ]),
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+      { key: "Cross-Origin-Embedder-Policy", value: "unsafe-none" },
+    ]),
   {
     key: "Content-Security-Policy",
     value: baseCSP,
@@ -40,10 +40,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  experimental: {
-    // 👇 Agregado: evita el error de params con Promises en rutas dinámicas
-    typedRoutes: false,
-  },
+  // 👇 Agregado: evita el error de params con Promises en rutas dinámicas
+  typedRoutes: false,
 
   async headers() {
     return [
@@ -57,7 +55,18 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
-      { protocol: "http", hostname: "**" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "*.ggpht.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "picsum.photos" },
+      { protocol: "https", hostname: "d1fufvy4xao6k9.cloudfront.net" },
+      { protocol: "https", hostname: "etianguis.s3.us-east-2.amazonaws.com" },
+      { protocol: "https", hostname: "medusa-public-images.s3.eu-west-1.amazonaws.com" },
+      { protocol: "https", hostname: "www.facebook.com" },
+      { protocol: "https", hostname: "www.paypalobjects.com" },
+      { protocol: "https", hostname: "camisasferruche.com" },
+      { protocol: "https", hostname: "*.vercel.app" },
     ],
   },
 

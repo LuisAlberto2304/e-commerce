@@ -94,15 +94,15 @@ function AnalyticsContent() {
 
   // 🚫 NO cargar scripts si no hay consentimiento para analytics
   if (!isClient || !hasConsent || !GA_ID) {
-    console.log('🚫 Analytics - Not loading scripts:', {
+    /* console.log('🚫 Analytics - Not loading scripts:', {
       isClient,
       hasConsent,
       hasGA_ID: !!GA_ID
-    });
+    }); */
     return null;
   }
 
-  console.log('✅ Analytics - Loading GA scripts with consent');
+  // console.log('✅ Analytics - Loading GA scripts with consent');
 
   return (
     <>
@@ -111,7 +111,7 @@ function AnalyticsContent() {
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
         strategy="afterInteractive"
         onLoad={() => {
-          console.log('✅ GA4 script loaded successfully');
+          // console.log('✅ GA4 script loaded successfully');
         }}
         onError={() => {
           console.error('❌ Failed to load GA4 script');

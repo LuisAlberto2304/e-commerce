@@ -32,7 +32,7 @@ function matchesColor(product: any, colorTerm: string) {
     }
   }
 
-    // 4) variants -> variant.options
+  // 4) variants -> variant.options
   if (Array.isArray(product.variants)) {
     for (const v of product.variants) {
       if (Array.isArray(v.options)) {
@@ -69,14 +69,14 @@ function matchesSize(product: any, sizeTerm: string) {
   }
 
   if (Array.isArray(product.variants)) {
-  for (const v of product.variants) {
-    if (Array.isArray(v.options)) {
-      for (const o of v.options) {
-        if (includesLower(o.value, sizeTerm)) return true;
+    for (const v of product.variants) {
+      if (Array.isArray(v.options)) {
+        for (const o of v.options) {
+          if (includesLower(o.value, sizeTerm)) return true;
+        }
       }
     }
   }
-}
 
 
   return false;
@@ -102,18 +102,18 @@ export async function fetchProducts(filters: {
   }
 
   if (filters.q?.trim()) params.append("q", filters.q.trim());
-  
+
   // 🔹 Aumentar el límite y expandir relaciones
-  params.append("limit", String(filters.limit ?? 200));
+  params.append("limit", String(filters.limit ?? 20));
   params.append("offset", String(filters.offset ?? 0));
-  
+
   // 🔹 IMPORTANTE: Expandir todas las relaciones necesarias
   params.append("expand", "variants,variants.options,variants.prices,options,options.values,categories,tags");
 
   const url = `${baseUrl}/api/products?${params.toString()}`;
 
-  console.log("📡 fetchProducts - llamada a:", url);
-  console.log("🎯 fetchProducts - filtros (raw):", filters);
+  // console.log("📡 fetchProducts - llamada a:", url);
+  // console.log("🎯 fetchProducts - filtros (raw):", filters);
 
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -126,10 +126,10 @@ export async function fetchProducts(filters: {
     const data = await res.json();
     let products: any[] = data.products || [];
 
-    console.log("✅ fetchProducts - productos recibidos:", products.length);
-    
+    // console.log("✅ fetchProducts - productos recibidos:", products.length);
+
     // 🔹 DEBUG: Ver estructura de productos
-    if (products.length > 0) {
+    /* if (products.length > 0) {
       console.log("🔍 Estructura del primer producto:", {
         id: products[0].id,
         title: products[0].title,
@@ -141,11 +141,11 @@ export async function fetchProducts(filters: {
         })),
         categories: products[0].categories
       });
-    }
+    } */
 
     // 🔹 NOTA: El filtrado por color y tamaño se hará en el cliente
     // para poder manejar correctamente las variantes
-    
+
     return { ...data, products };
   } catch (err) {
     console.error("🚨 fetchProducts - excepción:", err);
@@ -157,55 +157,37 @@ export async function fetchProducts(filters: {
 export async function fetchProductById(id: string) {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/products/${id}`;
-  console.log("📡 Llamando a API:", url);
+  // console.log("📡 Llamando a API:", url);
 
   try {
-    const res = await fetch(url, { 
+    const res = await fetch(url, {
       cache: "no-store",
     });
 
-    console.log("📊 Status de respuesta:", res.status);
-    
+    // console.log("📊 Status de respuesta:", res.status);
+
     if (!res.ok) {
-      // Si es 404, intentamos buscar en la lista completa
       if (res.status === 404) {
-        console.log("🔍 Producto no encontrado individualmente, buscando en lista...");
-        
-        // Buscar en lista completa
-        const listUrl = `${baseUrl}/api/products?limit=200`;
-        const listRes = await fetch(listUrl, { cache: "no-store" });
-        
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const productFromList = listData.products?.find((p: any) => p.id === id);
-          
-          if (productFromList) {
-            console.log("✅ Producto encontrado en lista completa");
-            return productFromList;
-          }
-        }
-        
-        console.log("❌ Producto no encontrado en ningún lugar");
+        console.log("❌ Producto no encontrado");
         return null;
       }
-      
+
       const errorText = await res.text();
       console.error("❌ Error en respuesta:", res.status, errorText);
       throw new Error(`Failed to fetch product: ${res.status}`);
     }
 
     const data = await res.json();
-    console.log("✅ Respuesta completa de API:", data);
+    // console.log("✅ Respuesta completa de API:", data);
 
     const product = data.product || data;
-    
+
     if (!product) {
       console.error("🚨 No se encontró producto en la respuesta");
       return null;
     }
 
-    console.log("✅ Producto extraído:", product.title || product.id);
+    // console.log("✅ Producto extraído:", product.title || product.id);
     return product;
   } catch (error) {
     console.error("🚨 Error en fetchProductById:", error);
@@ -220,7 +202,7 @@ export async function fetchCategoryById(id: string) {
 
   try {
     const res = await fetch(url);
-    
+
     if (!res.ok) {
       const errorText = await res.text();
       console.error("❌ Error en respuesta de categoría:", res.status, errorText);
@@ -238,11 +220,11 @@ export async function fetchCategoryById(id: string) {
 export async function fetchCategories() {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}/api/categories`;
-  console.log("📡 Llamando a categorías API:", url);
+  // console.log("📡 Llamando a categorías API:", url);
 
   try {
     const res = await fetch(url);
-    
+
     if (!res.ok) {
       const errorText = await res.text();
       console.error("❌ Error en respuesta de categorías:", res.status, errorText);

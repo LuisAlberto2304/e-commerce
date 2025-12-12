@@ -3,8 +3,9 @@ import '../styles/globals.css'
 import { Inter, Roboto } from 'next/font/google'
 import { PerformanceMetrics } from '../components/PerformanceMetrics'
 import LayoutContent from './LayoutContent'
+import QueryProvider from '@/context/QueryProvider'
 import Script from 'next/script'
-import  Analytics  from '@/components/Analytics'
+import Analytics from '@/components/Analytics'
 
 
 // 🔹 Configuración optimizada de fuentes
@@ -63,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 🔹 Preconnect para dominios críticos */}
         <link rel="preconnect" href="https://cdn.e-tianguis.com" />
         <link rel="dns-prefetch" href="https://cdn.e-tianguis.com" />
-        
+
         {/* 🔹 Preload para fuentes críticas si es necesario */}
         <link
           rel="preload"
@@ -77,11 +78,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${inter.className} bg-bg text-text min-h-screen flex flex-col antialiased`}>
-          {/* 🔹 Client Component para lógica de ruta */}
+        {/* 🔹 Client Component para lógica de ruta */}
+        <QueryProvider>
           <LayoutContent>{children}</LayoutContent>
-          <Analytics /> {/* 👈 nuevo componente para navegación SPA */}
-          {/* 🔹 Métricas de performance */}
-          <PerformanceMetrics />
+        </QueryProvider>
+        <Analytics /> {/* 👈 nuevo componente para navegación SPA */}
+        {/* 🔹 Métricas de performance */}
+        <PerformanceMetrics />
       </body>
     </html>
   )
