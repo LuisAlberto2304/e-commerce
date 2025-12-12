@@ -53,13 +53,18 @@ export default function ProductGridWithFilters({
 
   const getProductPriceNumber = (product: Product): number | null => {
     const variant = product.variants?.[0];
-    if (!variant) return null;
+    if (!variant || !variant.prices?.length) return null;
 
-    if (variant.prices?.length > 0) {
-      return variant.prices[0].amount / 100;
-    }
+    // Priorizar MXN
+    const mxnPrice = variant.prices.find(p => p.currency_code === 'mxn');
+    if (mxnPrice) return mxnPrice.amount / 100;
 
-    return null;
+    // Fallback a USD
+    const usdPrice = variant.prices.find(p => p.currency_code === 'usd');
+    if (usdPrice) return usdPrice.amount / 100;
+
+    // Último recurso: primer precio disponible
+    return variant.prices[0].amount / 100;
   };
 
 
@@ -387,13 +392,18 @@ export default function ProductGridWithFilters({
           {products.map((product) => {
             const getPrice = (product: Product) => {
               const variant = product.variants?.[0];
-              if (!variant) return "—";
+              if (!variant || !variant.prices?.length) return "—";
 
-              if (variant.prices?.length > 0) {
-                return `$${(variant.prices[0].amount / 100).toFixed(2)}`;
-              }
+              // Priorizar MXN
+              const mxnPrice = variant.prices.find((p: any) => p.currency_code === 'mxn');
+              if (mxnPrice) return `$${(mxnPrice.amount / 100).toFixed(2)} MXN`;
 
-              return "—";
+              // Fallback a USD
+              const usdPrice = variant.prices.find((p: any) => p.currency_code === 'usd');
+              if (usdPrice) return `$${(usdPrice.amount / 100).toFixed(2)} USD`;
+
+              // Último recurso
+              return `$${(variant.prices[0].amount / 100).toFixed(2)}`;
             };
 
             const productPrice = getPrice(product);
@@ -404,7 +414,7 @@ export default function ProductGridWithFilters({
                 id={product.id}
                 title={product.title}
                 description={product.description}
-                imageUrl={product.thumbnail || undefined}
+                imageUrl={product.thumbnail || product.images?.[0]?.url || undefined}
                 price={productPrice}
                 showRating={true}
                 useFirebaseStats={true}

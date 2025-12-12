@@ -38,6 +38,7 @@ export type Product = {
   options: ProductOption[];
   categories?: Array<{ id: string; name: string }>;
   collection?: { id: string; title: string };
+  images?: Array<{ url: string; id?: string }>;
 };
 
 export type Filters = {

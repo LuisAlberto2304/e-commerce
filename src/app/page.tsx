@@ -147,7 +147,7 @@ export default function HomePage() {
                       title={product.title}
                       description={product.description}
                       price={formatPrice(product.price)}
-                      imageUrl={product.thumbnail}
+                      imageUrl={product.thumbnail || product.images?.[0]?.url}
                     />
                     <div className="text-xs text-gray-500 mt-2">
                       Creado: {new Date(product.created_at).toLocaleDateString()}
@@ -181,7 +181,7 @@ export default function HomePage() {
                       title={product.title}
                       description={product.description}
                       price={formatPrice(product.price)}
-                      imageUrl={product.thumbnail}
+                      imageUrl={product.thumbnail || product.images?.[0]?.url}
                     />
 
                     <div className="text-xs text-gray-500 mt-2">
