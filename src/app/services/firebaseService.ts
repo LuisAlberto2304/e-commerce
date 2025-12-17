@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { collection, getDocs, doc, getDoc, orderBy, limit, query } from "firebase/firestore";
 import { db } from "../lib/firebaseClient";
-import { fetchProductById } from "../lib/medusaClient"; 
+import { fetchProductById } from "../lib/medusaClient";
 // -----------------------------
 // Interfaces
 // -----------------------------
@@ -18,6 +18,7 @@ export interface Product {
   store_id: string;
   totalSold: number;
   lastSell: string | undefined;
+  images?: Array<{ url: string }>;
 }
 
 // -----------------------------
@@ -46,6 +47,7 @@ const mapProduct = (
     store_id: sellerId,
     totalSold: totalSold ?? 0,
     lastSell: lastSell,
+    images: data.images || [],
   };
 };
 
@@ -103,8 +105,16 @@ export const getBestSellingProducts = async (
         const medusaProduct = await fetchProductById(entry.productId);
         if (!medusaProduct) return null;
 
-        const price =
-          medusaProduct.variants?.[0]?.prices?.[0]?.amount ?? 0;
+        const variants = medusaProduct.variants?.[0];
+        const prices = variants?.prices || [];
+
+        let price = 0;
+        const mxn = prices.find((p: any) => p.currency_code === 'mxn');
+        const usd = prices.find((p: any) => p.currency_code === 'usd');
+
+        if (mxn) price = mxn.amount;
+        else if (usd) price = usd.amount;
+        else if (prices.length > 0) price = prices[0].amount;
 
         return {
           id: medusaProduct.id,
@@ -113,6 +123,7 @@ export const getBestSellingProducts = async (
           description: medusaProduct.description,
           price,
           thumbnail: medusaProduct.thumbnail,
+          images: medusaProduct.images,
           totalSold: entry.totalSold,
           lastSell: entry.lastSell ?? new Date().toISOString(),
         };

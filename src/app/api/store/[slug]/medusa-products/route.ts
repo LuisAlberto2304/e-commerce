@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
-    
+
     console.log('🔄 Obteniendo productos Medusa para store slug:', slug);
 
     // 1. Buscar la tienda por slug
@@ -18,7 +18,7 @@ export async function GET(
       collection(db, 'users'),
       where('role', '==', 'seller')
     );
-    
+
     const storesSnapshot = await getDocs(storesQuery);
     const store = storesSnapshot.docs.find(doc => {
       const storeData = doc.data();
@@ -40,7 +40,7 @@ export async function GET(
 
     // 2. Buscar el Medusa Seller ID en Firebase
     let medusaSellerId = null;
-    
+
     // Intentar encontrar en la colección de sellers o en metadata
     try {
       const sellerDoc = await getDoc(doc(db, 'sellers', firebaseSellerId));
@@ -63,7 +63,7 @@ export async function GET(
     }
 
     if (!medusaSellerId) {
-      console.log('❌ No se pudo encontrar el Medusa Seller ID');
+      console.log('❌ No se pudo encontrar el Medusa Seller ID para:', firebaseSellerId);
       return NextResponse.json({
         products: [],
         count: 0,
@@ -72,11 +72,11 @@ export async function GET(
       }, { status: 200 });
     }
 
-    console.log('🎯 Usando Medusa Seller ID:', medusaSellerId);
+    // console.log('🎯 Usando Medusa Seller ID:', medusaSellerId);
 
     // 3. Obtener productos de Medusa usando el endpoint corregido
     const medusaToken = process.env.NEXT_PUBLIC_MEDUSA_TOKEN;
-    
+
     if (!medusaToken) {
       throw new Error('Medusa token not configured');
     }
@@ -95,8 +95,8 @@ export async function GET(
     }
 
     const medusaData = await medusaResponse.json();
-    
-    console.log(`✅ ${medusaData.products?.length || 0} productos obtenidos de Medusa`);
+
+    // console.log(`✅ ${medusaData.products?.length || 0} productos obtenidos de Medusa`);
 
     return NextResponse.json({
       products: medusaData.products || [],
@@ -108,7 +108,7 @@ export async function GET(
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('💥 Error obteniendo productos Medusa:', error);
+    // console.error('💥 Error obteniendo productos Medusa:', error);
     return NextResponse.json(
       { error: "Internal server error", details: error.message },
       { status: 500 }

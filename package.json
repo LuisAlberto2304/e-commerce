@@ -13,6 +13,7 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^5.2.0",
     "@stripe/stripe-js": "^8.0.0",
+    "@tanstack/react-query": "^5.90.12",
     "algoliasearch": "^4.25.2",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
@@ -26,7 +27,6 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
-    "lodash": "^4.17.21",
     "lucide-react": "^0.553.0",
     "next": "15.5.3",
     "next-sitemap": "^4.2.3",
@@ -44,7 +44,6 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/lodash": "^4.17.20",
     "@types/node": "^20.19.23",
     "@types/node-fetch": "^2.6.13",
     "@types/nodemailer": "^7.0.3",

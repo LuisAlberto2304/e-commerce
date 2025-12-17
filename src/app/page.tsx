@@ -11,6 +11,7 @@ import { auth } from './lib/firebaseClient';
 import Link from 'next/link';
 import { getNewestProducts, getBestSellingProducts, Product } from '@/app/services/firebaseService';
 import { testFirestore } from "@/app/services/testFirestore";
+import { useNewestProducts, useBestSellingProducts } from '@/hooks/useHomeProducts';
 
 const structuredData = [
   {
@@ -32,10 +33,6 @@ const structuredData = [
 
 export default function HomePage() {
   const [user, setUser] = useState<any>(null);
-  const [newestProducts, setNewestProducts] = useState<Product[]>([]);
-  const [bestSellingProducts, setBestSellingProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -43,43 +40,17 @@ export default function HomePage() {
     });
     return () => unsubscribe();
   }, []);
+  const { data: newestProducts = [], isLoading: loadingNewest, error: errorNewest } = useNewestProducts();
+  const { data: bestSellingProducts = [], isLoading: loadingBestSelling, error: errorBestSelling } = useBestSellingProducts();
 
-
+  const loading = loadingNewest || loadingBestSelling;
+  const error = errorNewest ? (errorNewest as Error).message : (errorBestSelling ? (errorBestSelling as Error).message : null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
-      console.log('🔄 Iniciando carga de productos...');
-      
-      try {
-        const [newest, bestSelling] = await Promise.all([
-          getNewestProducts(6),
-          getBestSellingProducts(6)
-        ]);
-        
-        console.log('✅ Productos cargados:', {
-          newest: newest.length,
-          bestSelling: bestSelling.length
-        });
-        
-        setNewestProducts(newest);
-        setBestSellingProducts(bestSelling);
-        
-        if (newest.length === 0) {
-          setError('No se encontraron productos. Asegúrate de que hay productos publicados en Firebase.');
-        }
-        
-      } catch (error) {
-        console.error('❌ Error en fetchProducts:', error);
-        setError('Error al cargar los productos. Revisa la consola para más detalles.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+    if (newestProducts.length === 0 && !loading && !error) {
+      // Optional: Log if empty but no error
+    }
+  }, [newestProducts, loading, error]);
 
   const banners = [
     {
@@ -108,7 +79,7 @@ export default function HomePage() {
     return price.toFixed(2);
   };
 
-    useEffect(() => {
+  useEffect(() => {
     testFirestore();
   }, []);
 
@@ -165,7 +136,7 @@ export default function HomePage() {
           <h2 className="text-4xl md:text-6xl text-center font-heading text-text mb-10">
             Productos Más Nuevos
           </h2>
-          
+
           {newestProducts.length > 0 ? (
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 justify-items-center">
@@ -176,7 +147,7 @@ export default function HomePage() {
                       title={product.title}
                       description={product.description}
                       price={formatPrice(product.price)}
-                      imageUrl={product.thumbnail}
+                      imageUrl={product.thumbnail || product.images?.[0]?.url}
                     />
                     <div className="text-xs text-gray-500 mt-2">
                       Creado: {new Date(product.created_at).toLocaleDateString()}
@@ -194,43 +165,43 @@ export default function HomePage() {
             </div>
           )}
         </div>
-          {/* 🔹 Productos más vendidos (temporalmente iguales) */}
-          <div className="mt-16">
-            <h2 className="text-4xl md:text-6xl text-center font-heading text-text mb-10">
-              Productos Destacados
-            </h2>
+        {/* 🔹 Productos más vendidos (temporalmente iguales) */}
+        <div className="mt-16">
+          <h2 className="text-4xl md:text-6xl text-center font-heading text-text mb-10">
+            Productos Destacados
+          </h2>
 
-            {bestSellingProducts.length > 0 ? (
-              <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 justify-items-center">
-                  {bestSellingProducts.map((product) => (
-                    <div key={`best-${product.store_id}-${product.id}`} className="w-full max-w-[300px]">
-                      <ProductCard
-                        id={product.id}
-                        title={product.title}
-                        description={product.description}
-                        price={formatPrice(product.price)}
-                        imageUrl={product.thumbnail}
-                      />
+          {bestSellingProducts.length > 0 ? (
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 justify-items-center">
+                {bestSellingProducts.map((product) => (
+                  <div key={`best-${product.store_id}-${product.id}`} className="w-full max-w-[300px]">
+                    <ProductCard
+                      id={product.id}
+                      title={product.title}
+                      description={product.description}
+                      price={formatPrice(product.price)}
+                      imageUrl={product.thumbnail || product.images?.[0]?.url}
+                    />
 
-                      <div className="text-xs text-gray-500 mt-2">
-                        Vendidos: {product.totalSold ?? 0}
-                      </div>
-
-                      <div className="text-xs text-gray-400">
-                        Última venta: {product.lastSell ? new Date(product.lastSell).toLocaleDateString() : "-"}
-                      </div>
-
+                    <div className="text-xs text-gray-500 mt-2">
+                      Vendidos: {product.totalSold ?? 0}
                     </div>
-                  ))}
-                </div>
+
+                    <div className="text-xs text-gray-400">
+                      Última venta: {product.lastSell ? new Date(product.lastSell).toLocaleDateString() : "-"}
+                    </div>
+
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No se encontraron productos destacados.</p>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No se encontraron productos destacados.</p>
+            </div>
+          )}
+        </div>
       </section>
 
       <Script
@@ -238,7 +209,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <CookieBanner 
+      <CookieBanner
         facebookPixelId={process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID}
         gaMeasurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}
       />

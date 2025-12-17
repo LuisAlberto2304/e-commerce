@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   User,
@@ -299,17 +299,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Debug
   useEffect(() => {
-    console.log('🔐 Estado del contexto:', {
+    /* console.log('🔐 Estado del contexto:', {
       hasUser: !!user,
       userEmail: user?.email,
       hasMedusaToken: !!medusaToken,
       hasCustomer: !!customer,
       userRole: userRole,
       isAdmin: isAdmin
-    });
+    }); */
   }, [user, medusaToken, customer, userRole, isAdmin]);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     role: userRole, // Usar el estado separado del rol
     loading,
@@ -319,7 +319,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     customer,
     loginMedusa,
     isAdmin, // Añadir propiedad isAdmin
-  };
+  }), [user, userRole, loading, medusaToken, customer, isAdmin]);
 
   return (
     <AuthContext.Provider value={value}>

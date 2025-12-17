@@ -19,9 +19,10 @@ import { doc, setDoc, deleteDoc, getDoc, updateDoc, increment, collection } from
 import { useAuth } from "@/context/userContext";
 import { gtagEvent } from "@/app/lib/gtag";
 import { useAlert } from "@/hooks/useCustomAlert";
+import { useProductQuery } from "@/hooks/useProductsQuery";
 export const revalidate = 120;
 
-type Props = { 
+type Props = {
   id: string;
   initialProduct?: any;
   initialCategory?: any;
@@ -73,28 +74,28 @@ const getProductImages = (product: any) => {
 
   if (product.thumbnail && !images.some(img => img.url === product.thumbnail)) {
     console.log("✅ Thumbnail encontrado:", product.thumbnail);
-    images.push({ 
-      url: product.thumbnail, 
+    images.push({
+      url: product.thumbnail,
       id: 'thumbnail'
     });
   }
 
-  if (images.length === 0 && product.variants) {
-    console.log("🔍 Buscando imágenes en variantes...");
-    product.variants.forEach((variant: any) => {
-      if (variant.images && Array.isArray(variant.images)) {
-        console.log("✅ Imágenes de variante encontradas:", variant.images);
-        images.push(...variant.images);
-      }
-      if (variant.thumbnail && !images.some(img => img.url === variant.thumbnail)) {
-        images.push({ 
-          url: variant.thumbnail, 
-          id: `variant-thumbnail-${variant.id}` 
-        });
-      }
-      // Medusa a veces devuelve thumbnail dentro de inventory items as well - no asumimos demasiado
-    });
-  }
+  // if (images.length === 0 && product.variants) {
+  //   console.log("🔍 Buscando imágenes en variantes...");
+  //   product.variants.forEach((variant: any) => {
+  //     if (variant.images && Array.isArray(variant.images)) {
+  //       console.log("✅ Imágenes de variante encontradas:", variant.images);
+  //       images.push(...variant.images);
+  //     }
+  //     if (variant.thumbnail && !images.some(img => img.url === variant.thumbnail)) {
+  //       images.push({
+  //         url: variant.thumbnail,
+  //         id: `variant-thumbnail-${variant.id}`
+  //       });
+  //     }
+  //     // Medusa a veces devuelve thumbnail dentro de inventory items as well - no asumimos demasiado
+  //   });
+  // }
 
   console.log("🖼️ Total de imágenes encontradas:", images.length);
   return images;
@@ -120,11 +121,22 @@ const getAbsoluteImageUrl = (url: string | undefined | null): string | null => {
 // Componente principal (corrigido)
 // -------------------------------------------------
 export default function ProductoDetalleClient({ id, initialProduct, initialCategory, recommendedProducts = [] }: Props) {
-  const [producto, setProducto] = useState<any | null>(initialProduct || null);
+  // 🔹 REACT QUERY INTEGRATION
+  const {
+    data: productData,
+    isLoading: queryLoading,
+    error: queryError
+  } = useProductQuery(id);
+
+  const producto = productData?.product || productData || initialProduct;
+  // Initialize other states based on "producto"
+
   const [category, setCategory] = useState<any | null>(initialCategory || null);
-  const [loading, setLoading] = useState(!initialProduct);
+  // loading is now derived from queryLoading unless we have initialProduct
+  const loading = queryLoading && !initialProduct;
+
   const [recommended, setRecommended] = useState<any[]>(recommendedProducts);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(queryError ? (queryError as Error).message : null);
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
@@ -145,7 +157,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 
   const { user } = useAuth(); // tu usuario actual autenticado
 
-   useEffect(() => {
+  useEffect(() => {
     if (producto) {
       gtagEvent('view_item', {
         currency: 'MXN',
@@ -193,7 +205,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 
     const favRef = doc(db, "wishlist", `${user.uid}_${producto.id}`);
 
-      const price =
+    const price =
       producto.price ??
       producto.variants?.[0]?.prices?.[0]?.amount ??
       0;
@@ -257,50 +269,50 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
 
   // productOptions reconstruidas
   const productOptions = useMemo(() => {
-      if (producto?.options?.length > 0) {
-        return producto.options.map((o: any) => ({
-          title: o.title,
-          values: o.values?.map((v: any) => v.value) || [],
-        }));
-      }
-      return extractOptionsFromVariants(producto);
-    }, [producto]);
+    if (producto?.options?.length > 0) {
+      return producto.options.map((o: any) => ({
+        title: o.title,
+        values: o.values?.map((v: any) => v.value) || [],
+      }));
+    }
+    return extractOptionsFromVariants(producto);
+  }, [producto]);
 
   // -------------------------------------------------
   // Helper: obtener stock real de una variante
   // -------------------------------------------------
   const getVariantStock = (variant: any): number => {
-     if (!variant) return 0;
- 
-     // Prioridad 1: `available_quantity` directamente en la variante (expansión simple).
-     if (typeof variant.available_quantity === "number") {
-       return variant.available_quantity;
-     }
- 
-     // Prioridad 2: Sumar `available_quantity` desde los `location_levels` de cada `inventory_item`.
-     // Esta es la estructura que muestras en tu log.
-     if (Array.isArray(variant.inventory_items) && variant.inventory_items.length > 0) {
-       return variant.inventory_items.reduce((totalStock: number, item: any) => {
-         // La ruta correcta es item -> inventory -> location_levels
-         const inventory = item.inventory;
-         if (inventory && Array.isArray(inventory.location_levels) && inventory.location_levels.length > 0) {
-           const stockInLevels = inventory.location_levels.reduce((levelStock: number, level: any) => {
-             return levelStock + (level.available_quantity || 0);
-           }, 0);
-           return totalStock + stockInLevels;
-         }
-         return totalStock;
-       }, 0);
-     }
- 
+    if (!variant) return 0;
+
+    // Prioridad 1: `available_quantity` directamente en la variante (expansión simple).
+    if (typeof variant.available_quantity === "number") {
+      return variant.available_quantity;
+    }
+
+    // Prioridad 2: Sumar `available_quantity` desde los `location_levels` de cada `inventory_item`.
+    // Esta es la estructura que muestras en tu log.
+    if (Array.isArray(variant.inventory_items) && variant.inventory_items.length > 0) {
+      return variant.inventory_items.reduce((totalStock: number, item: any) => {
+        // La ruta correcta es item -> inventory -> location_levels
+        const inventory = item.inventory;
+        if (inventory && Array.isArray(inventory.location_levels) && inventory.location_levels.length > 0) {
+          const stockInLevels = inventory.location_levels.reduce((levelStock: number, level: any) => {
+            return levelStock + (level.available_quantity || 0);
+          }, 0);
+          return totalStock + stockInLevels;
+        }
+        return totalStock;
+      }, 0);
+    }
+
     return 0;
   };
 
   // -------------------------------------------------
   // Encontrar variante que coincida con selectedOptions
   // -------------------------------------------------
-// Versión mejorada de la función
- const findMatchingVariant = (producto: any, selectedOptions: Record<string, string>) => {
+  // Versión mejorada de la función
+  const findMatchingVariant = (producto: any, selectedOptions: Record<string, string>) => {
     if (!producto || !producto.variants || !selectedOptions) {
       console.log('❌ Datos faltantes para buscar variante');
       return null;
@@ -339,13 +351,13 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   useEffect(() => {
     if (producto && productOptions.length > 0 && !optionsInitialized) {
       console.log('🔄 Inicializando opciones desde productOptions:', productOptions);
-      
+
       const defaults: Record<string, string> = {};
-      
+
       productOptions.forEach((option: any) => {
         if (option.values && option.values.length > 0) {
-          const firstValue = typeof option.values[0] === 'string' 
-            ? option.values[0] 
+          const firstValue = typeof option.values[0] === 'string'
+            ? option.values[0]
             : option.values[0].value;
           defaults[option.title] = firstValue;
         }
@@ -360,34 +372,34 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   }, [producto, productOptions, optionsInitialized]);
 
   useEffect(() => {
-  if (optionsInitialized && Object.keys(selectedOptions).length > 0) {
-    console.log('🔄 Buscando variante para opciones:', selectedOptions);
-    
-    const matchingVariant = findMatchingVariant(producto, selectedOptions);
-    setSelectedVariant(matchingVariant);
-    
-    if (matchingVariant) {
-      const stock = getVariantStock(matchingVariant);
-      setAvailableQuantity(stock);
-    } else {
-      setAvailableQuantity(0);
+    if (optionsInitialized && Object.keys(selectedOptions).length > 0) {
+      console.log('🔄 Buscando variante para opciones:', selectedOptions);
+
+      const matchingVariant = findMatchingVariant(producto, selectedOptions);
+      setSelectedVariant(matchingVariant);
+
+      if (matchingVariant) {
+        const stock = getVariantStock(matchingVariant);
+        setAvailableQuantity(stock);
+      } else {
+        setAvailableQuantity(0);
+      }
     }
-  }
-}, [selectedOptions, optionsInitialized, producto]);
+  }, [selectedOptions, optionsInitialized, producto]);
 
   // Comprueba si una opción es válida con la combinación actual
   const isOptionAvailable = (optionTitle: string, optionValue: string): boolean => {
     if (availableCombinations.size === 0) return true;
 
     const current = { ...selectedOptions, [optionTitle]: optionValue };
-    const key = Object.entries(current).map(([k,v]) => `${k}:${v}`).sort().join("|");
+    const key = Object.entries(current).map(([k, v]) => `${k}:${v}`).sort().join("|");
     return availableCombinations.has(key);
   };
 
   // -------------------------------------------------
   // Inicializar opciones por defecto (cuando productOptions esté listo)
   // -------------------------------------------------
-// Función de inicialización robusta
+  // Función de inicialización robusta
   const initializeDefaultOptions = () => {
     if (!producto || !producto.variants?.length) return;
 
@@ -408,10 +420,10 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
     if (Object.keys(defaults).length > 0) {
       console.log('🎯 Opciones inicializadas:', defaults);
       setSelectedOptions(defaults);
-      
+
       const matchingVariant = findMatchingVariant(producto, defaults);
       setSelectedVariant(matchingVariant);
-      
+
       if (matchingVariant) {
         const stock = getVariantStock(matchingVariant);
         setAvailableQuantity(stock);
@@ -420,47 +432,47 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   };
 
   useEffect(() => {
-  if (producto && productOptions.length > 0 && Object.keys(selectedOptions).length === 0) {
-    console.log('🔄 Inicializando opciones desde productOptions:', productOptions);
-    
-    const defaults: Record<string, string> = {};
-    
-    // Para cada opción, tomar el primer valor disponible
-    productOptions.forEach((option: any) => {
-      if (option.values && option.values.length > 0) {
-        // Los valores pueden venir como strings directamente o como objetos
-        const firstValue = typeof option.values[0] === 'string' 
-          ? option.values[0] 
-          : option.values[0].value;
-        defaults[option.title] = firstValue;
-        console.log(`✅ ${option.title}: ${firstValue}`);
-      }
-    });
+    if (producto && productOptions.length > 0 && Object.keys(selectedOptions).length === 0) {
+      console.log('🔄 Inicializando opciones desde productOptions:', productOptions);
 
-    console.log('🎯 Opciones por defecto:', defaults);
+      const defaults: Record<string, string> = {};
 
-    if (Object.keys(defaults).length > 0) {
-      setSelectedOptions(defaults);
-      
-      // Buscar la variante que coincida
-      const matchingVariant = findMatchingVariant(producto, defaults);
-      setSelectedVariant(matchingVariant);
-      
-      if (matchingVariant) {
-        const stock = getVariantStock(matchingVariant);
-        setAvailableQuantity(stock);
-        console.log('✅ Variante inicial encontrada:', matchingVariant.title);
+      // Para cada opción, tomar el primer valor disponible
+      productOptions.forEach((option: any) => {
+        if (option.values && option.values.length > 0) {
+          // Los valores pueden venir como strings directamente o como objetos
+          const firstValue = typeof option.values[0] === 'string'
+            ? option.values[0]
+            : option.values[0].value;
+          defaults[option.title] = firstValue;
+          console.log(`✅ ${option.title}: ${firstValue}`);
+        }
+      });
+
+      console.log('🎯 Opciones por defecto:', defaults);
+
+      if (Object.keys(defaults).length > 0) {
+        setSelectedOptions(defaults);
+
+        // Buscar la variante que coincida
+        const matchingVariant = findMatchingVariant(producto, defaults);
+        setSelectedVariant(matchingVariant);
+
+        if (matchingVariant) {
+          const stock = getVariantStock(matchingVariant);
+          setAvailableQuantity(stock);
+          console.log('✅ Variante inicial encontrada:', matchingVariant.title);
+        }
       }
     }
-  }
-}, [producto, productOptions, selectedOptions]);
+  }, [producto, productOptions, selectedOptions]);
 
   // -------------------------------------------------
   // Calcular opciones disponibles (lista por cada option)
   // -------------------------------------------------
   const calculateAvailableOptions = (currentOptions: { [key: string]: string }) => {
     const available: { [key: string]: string[] } = {};
-    
+
     // Inicializar array vacío para cada opción
     productOptions.forEach((opt: any) => {
       available[opt.title] = [];
@@ -474,14 +486,14 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
     productOptions.forEach((option: any) => {
       option.values.forEach((valueObj: any) => {
         const value = valueObj.value || valueObj;
-        
+
         // Crear combinación temporal
         const tempOptions = { ...currentOptions, [option.title]: value };
-        
+
         // Verificar si existe variante con esta combinación y stock
         const variantExists = producto.variants.some((variant: any) => {
           const parts = (variant.title || "").split(" / ").map((p: string) => p.trim());
-          
+
           // Mapear partes de variant a opciones
           const variantOptions: Record<string, string> = {};
           optionTitles.forEach((title: string, index: number) => {
@@ -599,7 +611,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         console.warn('⚠️ API de inventario falló, permitiendo compra:', data.error);
         return true; // Fallback seguro
@@ -621,7 +633,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   const { showAlert } = useAlert();
 
   const handleAddToCart = async () => {
-    
+
     if (!selectedVariant) {
       showAlert("Selecciona una variante antes de continuar", "warning");
       return;
@@ -657,7 +669,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
         selectedOptions: selectedOptions,
         addedAt: new Date(),
         status: "active",
-        
+
       };
 
       const cartRef = collection(db, "users", user.uid, "cart");
@@ -704,86 +716,69 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
   // -------------------------------------------------
   useEffect(() => {
     if (producto) {
-      console.log("🔍 ESTRUCTURA COMPLETA DEL PRODUCTO (debug):", producto);
-      console.log("🖼️ Imágenes procesadas:", productImages);
-      console.log("📦 Variantes disponibles:", productVariants.length);
-      console.log("🎯 Opciones del producto (reconstruidas):", productOptions);
-      console.log("🔁 Combinaciones disponibles (stock>0):", Array.from(availableCombinations));
-      console.log("🟢 selectedOptions:", selectedOptions);
-      console.log("🟢 selectedVariant:", selectedVariant ? { id: selectedVariant.id, title: selectedVariant.title, stock: getVariantStock(selectedVariant) } : null);
+      // console.log("🔍 ESTRUCTURA COMPLETA DEL PRODUCTO (debug):", producto);
+      // console.log("🖼️ Imágenes procesadas:", productImages);
+      // console.log("📦 Variantes disponibles:", productVariants.length);
+      // console.log("🎯 Opciones del producto (reconstruidas):", productOptions);
+      // console.log("🔁 Combinaciones disponibles (stock>0):", Array.from(availableCombinations));
+      // console.log("🟢 selectedOptions:", selectedOptions);
+      // console.log("🟢 selectedVariant:", selectedVariant ? { id: selectedVariant.id, title: selectedVariant.title, stock: getVariantStock(selectedVariant) } : null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [producto, productImages, productVariants, productOptions, availableCombinations, selectedOptions, selectedVariant]);
 
-  // Cargar producto si viene id (tu lógica original)
+  // Cargar recomendados si no vienen
   useEffect(() => {
-    if (initialProduct) {
-      initializeProduct(initialProduct);
-      return;
-    }
-
-    if (!id) {
-      setLoading(false);
-      return;
-    }
-
-    const loadProductData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const productData = await fetchProductById(id);
-        const product = productData?.product || productData;
-
-        if (!product) throw new Error('Producto no encontrado');
-
-        initializeProduct(product);
-
-        if (product.category_id) {
-          const categoryProductsData = await fetchProducts({ categoryId: product.category_id, limit: 8 });
+    if (producto && producto.category_id && recommended.length === 0) {
+      const loadRecommended = async () => {
+        try {
+          const categoryProductsData = await fetchProducts({ categoryId: producto.category_id, limit: 8 });
           const mappedProducts: CardProps[] = categoryProductsData.products
-            .filter((p: any) => p.id !== product.id)
+            .filter((p: any) => p.id !== producto.id)
             .map((p: any) => ({
               id: p.id,
               title: p.title || "Producto sin nombre",
               description: p.description || "",
-              imageUrl: getAbsoluteImageUrl(p.images?.[0]?.url) || "/images/placeholder-image.png",
+              imageUrl: getAbsoluteImageUrl(p.thumbnail || p.images?.[0]?.url) || "/images/placeholder-image.png",
+              imageUrl: getAbsoluteImageUrl(p.thumbnail || p.images?.[0]?.url) || "/images/placeholder-image.png",
               price: p.variants?.[0]?.prices?.[0]?.amount ? `$${(p.variants[0].prices[0].amount / 100).toFixed(2)}` : "$0.00",
               originalPrice: undefined,
               label: undefined,
               rating: 0,
               reviewCount: 0,
             }));
-
           setRecommended(mappedProducts);
+        } catch (e) {
+          console.error("Error loading recommended", e);
         }
+      };
+      loadRecommended();
+    }
+  }, [producto, recommended.length]);
 
-      } catch (err) {
-        console.error('❌ Error al cargar producto:', err);
-        setError('Error al cargar el producto');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProductData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, initialProduct]);
+  // Update error state if query error changes
+  useEffect(() => {
+    if (queryError) {
+      setError((queryError as Error).message);
+    }
+  }, [queryError]);
 
   const initializeProduct = (product: any) => {
-    console.log('🎯 INICIALIZANDO PRODUCTO:', product.title);
-    setProducto(product);
-
+    // This function might be redundant now as we derive 'producto' from query
+    // But we keep the image initialization logic
     const images = getProductImages(product);
-    if (images.length > 0) {
+    if (images.length > 0 && !selectedImage) {
       const firstImageUrl = getAbsoluteImageUrl(images[0].url);
       setSelectedImage(firstImageUrl);
-    } else {
-      setSelectedImage(null);
     }
-
-    // NOTA: initializeDefaultOptions se ejecutará automáticamente cuando productOptions esté listo (useEffect arriba)
   };
+
+  // Initialize image when product loads
+  useEffect(() => {
+    if (producto) {
+      initializeProduct(producto);
+    }
+  }, [producto]);
 
   const breadcrumbItems = [
     { label: 'Inicio', href: '/' },
@@ -828,11 +823,10 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                     <button
                       key={img.id || idx}
                       onClick={() => handleImageChange(img.url)}
-                      className={`flex-shrink-0 border rounded p-1 transition-colors ${
-                        selectedImage === absoluteUrl 
-                          ? 'border-orange-500' 
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
+                      className={`flex-shrink-0 border rounded p-1 transition-colors ${selectedImage === absoluteUrl
+                        ? 'border-orange-500'
+                        : 'border-gray-300 hover:border-gray-400'
+                        }`}
                     >
                       <img
                         src={absoluteUrl || '/images/placeholder-image.png'}
@@ -847,7 +841,7 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                 })}
               </div>
             )}
-            
+
             {/* Imagen principal */}
             <div className="flex-1 order-1 lg:order-2">
               <div className="bg-white border border-gray-200 rounded-lg flex items-center justify-center p-4">
@@ -948,20 +942,20 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                       </p>
                     )}
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2">
                     {option.values.map((value: any, valueIndex: number) => {
                       const valueStr = typeof value === 'string' ? value : value.value;
                       const isSelected = selectedOptions[option.title] === valueStr;
-                      
+
                       return (
                         <button
                           key={`option-${optionIndex}-value-${valueIndex}-${valueStr}`}
                           onClick={() => handleOptionChange(option.title, valueStr)}
                           className={`
                             px-3 py-2 text-sm border rounded transition-colors min-w-[60px]
-                            ${isSelected 
-                              ? "border-orange-500 bg-orange-50" 
+                            ${isSelected
+                              ? "border-orange-500 bg-orange-50"
                               : "border-gray-300 hover:border-gray-400 bg-white"
                             }
                           `}
@@ -1053,16 +1047,15 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
                   </>
                 )}
               </button>
-              
+
               <div className="flex gap-2">
                 <button
                   onClick={toggleFavorite}
                   disabled={loadingFav || isOutOfStock}
-                  className={`flex-1 border px-4 py-2 rounded text-sm font-normal transition-colors flex items-center justify-center gap-2 ${
-                    isFavorite
-                      ? "border-red-500 bg-red-50 text-red-700 hover:bg-red-100"
-                      : "border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`flex-1 border px-4 py-2 rounded text-sm font-normal transition-colors flex items-center justify-center gap-2 ${isFavorite
+                    ? "border-red-500 bg-red-50 text-red-700 hover:bg-red-100"
+                    : "border-gray-300 hover:bg-gray-50"
+                    }`}
                 >
                   <Heart
                     size={16}
@@ -1083,21 +1076,21 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
       </div>
 
       {/* Sección de detalles adicionales - Versión simplificada */}
-<div className="mt-12 space-y-12">
-  {/* Recomendados */}
-  <div>
-    {recommended.length > 0 ? (
-      <ProductCarousel products={recommended} title="Los clientes que vieron este producto también vieron" />
-    ) : (
-      <p className="text-gray-500 text-center">Cargando productos recomendados...</p>
-    )}
-  </div>
+      <div className="mt-12 space-y-12">
+        {/* Recomendados */}
+        <div>
+          {recommended.length > 0 ? (
+            <ProductCarousel products={recommended} title="Los clientes que vieron este producto también vieron" />
+          ) : (
+            <p className="text-gray-500 text-center">Cargando productos recomendados...</p>
+          )}
+        </div>
 
-  {/* Reseñas */}
-  <div>
-    <ProductReviews productId={producto.id}/>
-  </div>
-</div>
+        {/* Reseñas */}
+        <div>
+          <ProductReviews productId={producto.id} />
+        </div>
+      </div>
     </div>
   );
 }
