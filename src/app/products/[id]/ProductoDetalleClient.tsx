@@ -740,7 +740,6 @@ export default function ProductoDetalleClient({ id, initialProduct, initialCateg
               title: p.title || "Producto sin nombre",
               description: p.description || "",
               imageUrl: getAbsoluteImageUrl(p.thumbnail || p.images?.[0]?.url) || "/images/placeholder-image.png",
-              imageUrl: getAbsoluteImageUrl(p.thumbnail || p.images?.[0]?.url) || "/images/placeholder-image.png",
               price: p.variants?.[0]?.prices?.[0]?.amount ? `$${(p.variants[0].prices[0].amount / 100).toFixed(2)}` : "$0.00",
               originalPrice: undefined,
               label: undefined,
